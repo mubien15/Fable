@@ -858,14 +858,51 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
   const [loading, setLoading] = useState(false)
   const [turn, setTurn] = useState(0)
   const [done, setDone] = useState(false)
+  const [listening, setListening] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+  const recRef = useRef(null)
+  const finalRef = useRef('')
+
+  const toggleMic = () => {
+    if (listening) {
+      recRef.current?.stop()
+      setListening(false)
+      return
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) { alert('Voice input requires Chrome or Safari 17+.'); return }
+    const r = new SR()
+    r.continuous = true
+    r.interimResults = true
+    r.lang = 'en-US'
+    finalRef.current = input
+    r.onresult = (e) => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
+        else interim += e.results[i][0].transcript
+      }
+      setInput(finalRef.current + interim)
+    }
+    r.onerror = () => setListening(false)
+    r.onend = () => setListening(false)
+    r.start()
+    recRef.current = r
+    setListening(true)
+  }
+
+  // Stop mic when message is sent
+  const stopMic = () => {
+    if (listening) { recRef.current?.stop(); setListening(false) }
+  }
 
   const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
 
   const send = async () => {
     const text = input.trim()
     if (!text || loading || done) return
+    stopMic()
 
     const userMsg = { role: 'user', content: text }
     const next = [...messages, userMsg]
@@ -993,19 +1030,47 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
         {done ? (
           <Btn onClick={finish}>Complete session ✓</Btn>
         ) : (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder="Type your response…"
-              style={{
-                flex: 1, padding: '12px 16px', borderRadius: 12,
-                border: `1.5px solid ${C.border}`, background: C.bg,
-                fontSize: 15, color: C.ink, fontFamily: SERIF,
-              }}
-            />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* Input with embedded mic */}
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && send()}
+                placeholder={listening ? 'Listening…' : 'Type or speak…'}
+                style={{
+                  width: '100%', padding: '12px 46px 12px 16px', borderRadius: 12,
+                  border: `1.5px solid ${listening ? C.coral : C.border}`,
+                  background: listening ? C.coralBg : C.bg,
+                  fontSize: 15, color: C.ink, fontFamily: SERIF,
+                  transition: 'border-color .15s, background .15s',
+                }}
+              />
+              {/* Mic button inside input */}
+              <button
+                onClick={toggleMic}
+                style={{
+                  position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                  width: 30, height: 30, borderRadius: '50%', border: 'none',
+                  background: listening ? C.coral : C.border,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  animation: listening ? 'recordPulse 1.5s ease-in-out infinite' : 'none',
+                  transition: 'background .2s',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke={listening ? '#fff' : C.inkSoft} strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                  <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Send button */}
             <button
               onClick={send}
               disabled={!input.trim() || loading}
@@ -1013,6 +1078,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
                 background: !input.trim() || loading ? C.coralDim : C.coral,
                 color: '#fff', border: 'none', borderRadius: 12,
                 padding: '0 18px', fontSize: 18, fontWeight: 700,
+                height: 46, flexShrink: 0,
               }}
             >→</button>
           </div>
