@@ -613,7 +613,7 @@ function CoachScreen({ user, initialScenario, setScreen, onStartSession }) {
 // ═══════════════════════════════════════════════
 // PRACTICE SCREEN
 // ═══════════════════════════════════════════════
-function PracticeScreen({ session, setScreen, onFeedback }) {
+function PracticeScreen({ session, setScreen, onFeedback, user }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -626,7 +626,12 @@ function PracticeScreen({ session, setScreen, onFeedback }) {
       const res = await fetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: session?.context, userMessage: text.trim() }),
+        body: JSON.stringify({
+            scenario: session?.context,
+            userMessage: text.trim(),
+            userName: user?.name,
+            userChallenge: CHALLENGES.find((c) => c.id === user?.challenge)?.label,
+          }),
       })
       const data = await res.json()
       onFeedback({ feedback: data, userMessage: text.trim() })
@@ -694,7 +699,7 @@ function PracticeScreen({ session, setScreen, onFeedback }) {
 // ═══════════════════════════════════════════════
 // FEEDBACK SCREEN
 // ═══════════════════════════════════════════════
-function FeedbackScreen({ session, setScreen, setSessions, sessions }) {
+function FeedbackScreen({ session, setScreen, setSessions, sessions, storylab, setStorylab }) {
   const [revealed, setRevealed] = useState(false)
   const { feedback, userMessage } = session
 
@@ -711,6 +716,18 @@ function FeedbackScreen({ session, setScreen, setSessions, sessions }) {
     const updated = [...sessions, newSession]
     setSessions(updated)
     lsSet(LS.sessions, updated)
+
+    // Advance Storylab day when a mission is completed
+    if (session.scenario === 'storylab' && storylab && setStorylab) {
+      const currentDay = storylab.currentDay || 1
+      const completedDays = storylab.completedDays || []
+      if (!completedDays.includes(currentDay)) {
+        const newCompleted = [...completedDays, currentDay]
+        const nextDay = Math.min(currentDay + 1, 30)
+        setStorylab({ currentDay: nextDay, completedDays: newCompleted })
+      }
+    }
+
     setScreen('home')
   }
 
@@ -1418,6 +1435,7 @@ export default function App() {
             session={currentSession}
             setScreen={setScreen}
             onFeedback={receiveFeedback}
+            user={user}
           />
         )
 
@@ -1428,6 +1446,8 @@ export default function App() {
             setScreen={setScreen}
             sessions={sessions}
             setSessions={setSessions}
+            storylab={storylab}
+            setStorylab={(sl) => { setStorylab(sl); lsSet(LS.storylab, sl) }}
           />
         )
 
