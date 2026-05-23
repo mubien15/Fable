@@ -228,9 +228,9 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
 function BottomNav({ active, onChange }) {
   const tabs = [
     { id: 'home',      icon: '⌂',  label: 'Home'      },
+    { id: 'scenarios', icon: '⊞',  label: 'Scenarios' },
     { id: 'coach',     icon: '◎',  label: 'Coach'     },
     { id: 'progress',  icon: '◈',  label: 'Progress'  },
-    { id: 'scenarios', icon: '⊞',  label: 'Scenarios' },
   ]
   return (
     <nav style={{
