@@ -9,7 +9,7 @@ export const LEADERSHIP_SCENARIOS = [
     counterpartRole: 'A junior team member — not lazy, but struggling. They may be unaware of how serious the situation is, or they may be dealing with something personal they haven\'t shared.',
     context: `Your direct report has missed three consecutive deadlines over the past 6 weeks. The work quality when delivered is acceptable but consistently late. You have mentioned it informally twice in your weekly check-ins but nothing has changed. This is the first formal conversation. You genuinely like this person and want them to succeed — but you also cannot let this continue.`,
     challenge: 'This conversation must be clear enough that the person understands this is serious — not another informal mention — but human enough that they don\'t shut down or feel attacked. The trap is being so kind that the message doesn\'t land, or so blunt that the person becomes defensive or upset.',
-    opening_line: 'Thanks for coming. I wanted to have a proper one-on-one — outside of our usual check-in — because there\'s something I want to address directly.',
+    opening_line: "Hi. You said you wanted to meet properly — outside the usual check-in. Is everything okay?",
     coaching_focus: [
       'Being specific about the behaviour (lateness) without attacking the person',
       'Checking whether there is something you don\'t know — don\'t assume it\'s just performance',
@@ -37,7 +37,7 @@ Play the direct report as follows:
     counterpartRole: 'The same direct report. They improved for two weeks after the first conversation, then slipped back. They know this conversation is coming.',
     context: `Four weeks after your first formal underperformance conversation, the pattern has returned. Two more missed deadlines, one piece of work that had to be redone by another team member. You had put in place a simple check-in structure and agreed milestones. They met the milestones for two weeks then stopped. You now need to escalate the conversation — clearly, respectfully, and with the next steps involving HR.`,
     challenge: 'This is harder than the first conversation because both of you know the history. You need to be honest that the situation has escalated without making the person feel it\'s over. You also need to formally document the conversation and reference HR involvement — which changes the tone significantly.',
-    opening_line: 'I want to start by acknowledging that there was real improvement for a couple of weeks after our last conversation. I noticed that, and I appreciated it. But I also need to be honest with you about what\'s happened since.',
+    opening_line: "Yeah. I figured this was coming.",
     coaching_focus: [
       'Acknowledging genuine progress before naming the regression — this is not soft, it\'s accurate',
       'Being explicit about the escalation (HR involvement) without it sounding like a threat',
@@ -65,7 +65,7 @@ Play the direct report as follows:
     counterpartRole: 'A high-performer who has a blind spot — they communicate in a way that alienates colleagues, but they are unaware of it and consider themselves a strong communicator.',
     context: `A colleague — technically excellent, ambitious, well-regarded by leadership — has been getting feedback from the team that they are dismissive in meetings, interrupt frequently, and make junior team members feel their ideas aren't valued. Three people have raised this with you informally. The colleague trusts you. You are not their line manager but they have asked you for honest feedback as a mentor.`,
     challenge: 'This person does not think they have a problem. Telling them they do — with specific examples — will likely trigger defensiveness. The goal is not to force agreement in this conversation, but to plant something that makes them genuinely reflect. The trap is softening the message so much that they leave thinking \'well, a few people had a bad day.\'',
-    opening_line: 'You asked me to be honest with you, so I\'m going to be. Some of what I\'m going to say might be uncomfortable — but I think it matters for where you want to go.',
+    opening_line: "Thanks for making time for this. I've been wanting to get your honest read — you always give it to me straight.",
     coaching_focus: [
       'Framing feedback as investment, not criticism',
       'Using specific examples without it sounding like a case file against them',

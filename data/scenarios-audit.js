@@ -37,7 +37,7 @@ Play the Process Owner as follows:
     counterpartRole: "Head of Compliance at a bank — senior, experienced, and does not like being told their team missed something regulatory.",
     context: `During a regulatory compliance review, you have identified that the firm's transaction monitoring procedures do not meet the minimum requirements under the local AML regulation (equivalent to FINTRAC, FCA, or OSFI standards). Specifically, the lookback period for alerts is shorter than required, and there is no documented escalation path for high-risk alerts. This is a reportable gap that will likely appear in the external audit report.`,
     challenge: 'This is a senior stakeholder who may be embarrassed, dismissive, or try to reframe the finding as a \'documentation issue\' rather than a substantive compliance gap. You need to be firm, evidence-based, and clear about the consequences — without being adversarial.',
-    opening_line: "I appreciate you making time today. I wanted to walk you through what we found in the transaction monitoring section before the report is finalised.",
+    opening_line: "Thanks for coming in. I want to understand exactly what you're planning to include before anything goes to paper — so let's hear it.",
     coaching_focus: [
       'Framing regulatory gaps without sounding accusatory',
       'Holding your position against a senior stakeholder',
@@ -94,7 +94,7 @@ Play the CFO as follows:
     counterpartRole: 'A room of three people: a defensive Process Owner, a neutral CFO, and a supportive Internal Audit Director. You will play all three.',
     context: `You are running the closing meeting for a completed internal audit. You have 4 findings: one High, two Mediums, one Low. The High finding relates to a control failure in the procurement process. The Process Owner in the room owns that finding and has already pushed back in writing. The CFO is neutral but busy. The Audit Director is supportive of your work.`,
     challenge: "You need to present all findings clearly and professionally, manage the Process Owner's defensiveness in a group setting, and close the meeting with agreed management actions — all without losing the room or getting drawn into a debate.",
-    opening_line: "Good afternoon everyone. Thanks for joining the closing meeting for the Procurement Audit. I'll take about 20 minutes to walk through the findings, and then we'll confirm the management responses before we close.",
+    opening_line: "[CFO]: Right, let's get started — I have a hard stop at four-thirty. Take us through what you've found.",
     coaching_focus: [
       'Presenting findings confidently to a mixed audience',
       'Managing a defensive stakeholder in a group setting without embarrassing them',
