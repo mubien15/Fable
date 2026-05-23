@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ALL_TRACKS } from '../data/tracks'
+import { DAILY_REP_PROGRAM } from '../data/daily-rep'
 
 // ═══════════════════════════════════════════════
 // DESIGN TOKENS
@@ -69,13 +70,38 @@ function findTrackScenario(scenarioId) {
   return null
 }
 
+// Resolve a Daily Rep day into a playable scenario object
+function getDailyRepScenario(day) {
+  if (!day || day.type === 'user-choice') return null
+  if (day.type === 'mini') {
+    const m = day.mini_scenario
+    return {
+      id: `daily-rep-day-${day.day}`,
+      title: m.title,
+      context: m.context,
+      counterpartRole: m.counterpartRole,
+      userRole: m.userRole,
+      challenge: m.challenge,
+      opening_line: m.opening_line,
+      coaching_focus: m.coaching_focus || [],
+      difficulty_default: m.difficulty_default || day.difficulty_default || 'medium',
+      system_prompt_addition: m.system_prompt_addition || '',
+    }
+  }
+  if (day.type === 'track') {
+    return findTrackScenario(day.scenario_id)?.scenario || null
+  }
+  return null
+}
+
 // ═══════════════════════════════════════════════
 // STORAGE HELPERS
 // ═══════════════════════════════════════════════
 const LS = {
-  user:      'fable_user',
-  sessions:  'fable_sessions',
-  storylab:  'fable_storylab',
+  user:     'fable_user',
+  sessions: 'fable_sessions',
+  storylab: 'fable_storylab',  // kept for migration awareness
+  dailyRep: 'fable_daily_rep',
 }
 
 function lsGet(key, fallback) {
@@ -436,7 +462,7 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 const TRACK_BG = { audit: C.trackAudit, consulting: C.trackConsulting, leadership: C.trackLeadership }
 
-function HomeScreen({ user, sessions, storylab, setScreen, onResumeSession, setActiveTrack }) {
+function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay }) {
   const greeting = (() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
@@ -444,8 +470,10 @@ function HomeScreen({ user, sessions, storylab, setScreen, onResumeSession, setA
     return 'Good evening'
   })()
 
-  const currentMission = MISSIONS[Math.min((storylab.currentDay || 1) - 1, 29)]
-  const completedCount = (storylab.completedDays || []).length
+  const currentDayIndex = Math.min((dailyRep.currentDay || 1) - 1, 29)
+  const currentDayData  = DAILY_REP_PROGRAM[currentDayIndex]
+  const completedCount  = (dailyRep.completedDays || []).length
+  const streak          = dailyRep.streak || 0
 
   // Surface user's recommended track first
   const recommendedId = ROLES.find((r) => r.id === user?.role)?.recommended_track
@@ -553,27 +581,40 @@ function HomeScreen({ user, sessions, storylab, setScreen, onResumeSession, setA
         </div>
       )}
 
-      {/* ── Storylab ── */}
+      {/* ── Daily Rep ── */}
       <div style={{ marginTop: 28 }}>
         <SectionLabel>Daily Practice</SectionLabel>
         <Card style={{ background: C.surface }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 16 }}>✦</span>
-            <div>
-              <p style={{
-                fontFamily: SANS, fontSize: 10, fontWeight: 700,
-                color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase',
-              }}>
-                STORYLAB · DAY {storylab.currentDay || 1}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+            }}>🎯</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase' }}>
+                  DAILY REP · DAY {dailyRep.currentDay || 1}
+                </p>
+                {streak > 0 && (
+                  <span style={{ fontFamily: SANS, fontSize: 10, color: C.coral, background: C.coralBg, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
+                    🔥 {streak} streak
+                  </span>
+                )}
+              </div>
+              <p style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.ink, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentDayData?.title}
               </p>
-              <p style={{ fontFamily: SERIF, fontSize: 15, color: C.ink }}>{currentMission.title}</p>
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkMid }}>
+                {currentDayData?.phase_label} · {currentDayData?.duration}
+              </p>
             </div>
           </div>
-          <div style={{ height: 4, background: C.border, borderRadius: 4, marginBottom: 16, overflow: 'hidden' }}>
+          <div style={{ height: 4, background: C.border, borderRadius: 4, marginBottom: 14, overflow: 'hidden' }}>
             <div style={{ height: '100%', width: `${(completedCount / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
           </div>
-          <Btn onClick={() => setScreen('storylab')} style={{ padding: '14px 20px', fontSize: 15, borderRadius: 50 }}>
-            Continue →
+          <Btn onClick={() => onStartDay(currentDayData)} style={{ borderRadius: 50 }}>
+            Begin today's rep →
           </Btn>
         </Card>
       </div>
@@ -1467,12 +1508,19 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       context: session?.context,
       userMessage: session?.userMessage,
       feedback: session?.feedback,
+      isDailyRep: session?.isDailyRep || false,
+      dailyRepDay: session?.dailyRepDay,
       completed: true,
     }
     const updated = [...sessions, newSession]
     setSessions(updated)
     lsSet(LS.sessions, updated)
-    setScreen('home')
+    // Route to debrief screen for Daily Rep sessions
+    if (session?.isDailyRep) {
+      setScreen('daily-rep-debrief')
+    } else {
+      setScreen('home')
+    }
   }
 
   const bgFor = (role) => {
@@ -1785,7 +1833,365 @@ function ProgressScreen({ sessions, setScreen }) {
 }
 
 // ═══════════════════════════════════════════════
-// STORYLAB SCREEN
+// DAILY REP — INSIGHT SCREEN (full-screen, dark)
+// ═══════════════════════════════════════════════
+function DailyRepInsightScreen({ day, onContinue }) {
+  if (!day) return null
+  return (
+    <div
+      className="fade-in"
+      onClick={onContinue}
+      style={{
+        height: '100dvh', background: '#0F172A',
+        display: 'flex', flexDirection: 'column',
+        justifyContent: 'center', padding: '48px 32px',
+        cursor: 'pointer', userSelect: 'none',
+      }}
+    >
+      {/* Phase / Day label */}
+      <p style={{
+        fontFamily: SANS, color: '#475569', fontSize: 11, fontWeight: 600,
+        letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 36,
+      }}>
+        Day {day.day} · {day.phase_label}
+      </p>
+
+      {/* Insight quote */}
+      <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 22, lineHeight: 1.7, marginBottom: 48 }}>
+        "{day.insight}"
+      </p>
+
+      {/* Focus accent */}
+      <div style={{ borderLeft: `3px solid ${C.coral}`, paddingLeft: 18, marginBottom: 56 }}>
+        <p style={{ fontFamily: SANS, color: '#64748B', fontSize: 12, marginBottom: 4 }}>Today's focus</p>
+        <p style={{ fontFamily: SANS, color: '#CBD5E1', fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
+          {day.focus}
+        </p>
+      </div>
+
+      {/* Tap hint */}
+      <p style={{ fontFamily: SANS, color: '#334155', fontSize: 12, textAlign: 'center', animation: 'pulse 2s ease-in-out infinite' }}>
+        tap anywhere to continue
+      </p>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// DAILY REP — BRIEFING SCREEN
+// ═══════════════════════════════════════════════
+function DailyRepBriefingScreen({ day, scenario, setScreen, onBegin, onChooseScenario }) {
+  const [difficulty, setDifficulty] = useState(
+    day?.difficulty_default || scenario?.difficulty_default || 'medium'
+  )
+  const isUserChoice = day?.type === 'user-choice'
+
+  if (!day) return null
+
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+
+      {/* Back */}
+      <button
+        onClick={() => setScreen('daily-rep')}
+        style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 20, padding: 0 }}
+      >←</button>
+
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontFamily: SANS, color: C.coral, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+          Day {day.day} · {day.phase_label}
+        </p>
+        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 4 }}>
+          {day.title}
+        </h1>
+        <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid }}>{day.duration}</p>
+      </div>
+
+      {isUserChoice ? (
+        <>
+          <Card bg={C.coralBg} border={C.coralDim} style={{ marginBottom: 24 }}>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>
+              {day.focus}. Browse the scenario library and pick the one that feels most relevant or challenging right now.
+            </p>
+          </Card>
+          <Btn onClick={onChooseScenario} style={{ marginBottom: 10 }}>
+            Choose your scenario →
+          </Btn>
+          <Btn variant="ghost" onClick={() => setScreen('home')}>Back to home</Btn>
+        </>
+      ) : scenario ? (
+        <>
+          {/* Scenario context */}
+          <Card bg={C.surfaceSubtle} border={C.border} style={{ marginBottom: 18 }}>
+            <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', marginBottom: 8, textTransform: 'uppercase' }}>
+              The situation
+            </p>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>
+              {scenario.context}
+            </p>
+          </Card>
+
+          {/* Coaching focus */}
+          <div style={{ marginBottom: 18 }}>
+            <p style={{ fontFamily: SANS, color: C.blueDeep, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 10 }}>
+              What you'll practise
+            </p>
+            {(scenario.coaching_focus || []).map((f, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
+                <span style={{ color: C.coral, fontSize: 12, marginTop: 2, flexShrink: 0 }}>◆</span>
+                <p style={{ fontFamily: SERIF, color: C.inkMid, fontSize: 14, lineHeight: 1.5 }}>{f}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Difficulty picker */}
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Difficulty
+          </p>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            {Object.entries(DIFFICULTY_META).map(([key, meta]) => (
+              <button
+                key={key}
+                onClick={() => setDifficulty(key)}
+                style={{
+                  flex: 1, padding: '10px 8px', borderRadius: 12,
+                  border: `1.5px solid ${difficulty === key ? meta.color(C) : C.border}`,
+                  background: difficulty === key ? meta.bg(C) : C.surface,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  transition: 'all .15s',
+                }}
+              >
+                <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: difficulty === key ? meta.color(C) : C.inkSoft }}>
+                  {meta.label}
+                </span>
+                <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
+                  {meta.desc}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <Btn onClick={() => onBegin(scenario, difficulty)}>Begin →</Btn>
+        </>
+      ) : (
+        <Card style={{ textAlign: 'center', padding: '28px' }}>
+          <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 15 }}>Scenario not found. Try a different day.</p>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// DAILY REP — DEBRIEF SCREEN (post-simulation)
+// ═══════════════════════════════════════════════
+function DailyRepDebriefScreen({ day, setScreen, onComplete }) {
+  const [reflection, setReflection] = useState('')
+  const [saved,      setSaved]      = useState(false)
+
+  const save = () => {
+    onComplete(reflection)
+    setSaved(true)
+  }
+
+  if (!day) return null
+
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: C.teal, marginBottom: 8 }}>
+          Rep complete ✓
+        </p>
+        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink }}>
+          Day {day.day} done
+        </h1>
+      </div>
+
+      {/* Insight to carry forward */}
+      <Card bg={C.coralBg} border={C.coralDim} style={{ marginBottom: 24 }}>
+        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 8 }}>
+          Today's insight
+        </p>
+        <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65, fontStyle: 'italic' }}>
+          "{day.insight}"
+        </p>
+      </Card>
+
+      {/* Reflection */}
+      <div style={{ marginBottom: 20 }}>
+        <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.inkMid, marginBottom: 12 }}>
+          What's one thing you noticed about how you showed up in that conversation?
+        </p>
+        <VoiceTextarea
+          value={reflection}
+          onChange={setReflection}
+          placeholder="Your own words…"
+          minHeight={100}
+        />
+      </div>
+
+      {saved ? (
+        <>
+          <div style={{ textAlign: 'center', padding: '16px', borderRadius: 14, background: C.tealBg, marginBottom: 20 }}>
+            <p style={{ fontFamily: SANS, color: C.teal, fontWeight: 700, fontSize: 15 }}>
+              ✓ Day {day.day} complete
+            </p>
+          </div>
+          <Btn onClick={() => setScreen('home')}>Back to home →</Btn>
+        </>
+      ) : (
+        <Btn onClick={save} disabled={!reflection.trim()}>
+          Save & complete →
+        </Btn>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// DAILY REP — PROGRAM SCREEN (full 30-day view)
+// ═══════════════════════════════════════════════
+function DailyRepScreen({ dailyRep, setScreen, onStartDay }) {
+  const currentDay    = dailyRep.currentDay || 1
+  const completedDays = dailyRep.completedDays || []
+  const streak        = dailyRep.streak || 0
+
+  const PHASES = [
+    { phase: 1, label: 'Foundation',  range: [1, 7]   },
+    { phase: 2, label: 'Escalation',  range: [8, 14]  },
+    { phase: 3, label: 'Advanced',    range: [15, 22] },
+    { phase: 4, label: 'Mastery',     range: [23, 30] },
+  ]
+
+  return (
+    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+
+      {/* Header */}
+      <div style={{ marginBottom: 6 }}>
+        <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 6 }}>
+          Daily Practice
+        </p>
+        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 4 }}>Daily Rep</h1>
+        <p style={{ color: C.inkSoft, fontSize: 14, lineHeight: 1.6 }}>
+          30 days of professional conversation practice.
+        </p>
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 20, marginBottom: 20 }}>
+        {[
+          { val: streak,              label: 'Day streak',  color: C.coral },
+          { val: completedDays.length, label: 'Days done',  color: C.blue  },
+          { val: 30 - completedDays.length, label: 'Remaining', color: C.teal  },
+        ].map((s) => (
+          <Card key={s.label} style={{ textAlign: 'center', padding: '14px 8px' }}>
+            <p style={{ fontFamily: SERIF, color: s.color, fontSize: 26, fontWeight: 600, lineHeight: 1, marginBottom: 4 }}>{s.val}</p>
+            <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', lineHeight: 1.3 }}>
+              {s.label}
+            </p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12 }}>Day {currentDay} of 30</span>
+          <span style={{ fontFamily: SANS, color: C.coral, fontSize: 12, fontWeight: 700 }}>
+            {Math.round((completedDays.length / 30) * 100)}% complete
+          </span>
+        </div>
+        <div style={{ height: 5, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(completedDays.length / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
+        </div>
+      </div>
+
+      {/* Phases */}
+      {PHASES.map(({ phase, label, range }) => {
+        const phaseDays = DAILY_REP_PROGRAM.filter((d) => d.phase === phase)
+        return (
+          <div key={phase} style={{ marginBottom: 28 }}>
+            {/* Phase divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ height: 1, flex: 1, background: C.border }} />
+              <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: C.blueDeep, flexShrink: 0 }}>
+                Phase {phase} — {label}
+              </p>
+              <div style={{ height: 1, flex: 1, background: C.border }} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {phaseDays.map((d) => {
+                const isDone   = completedDays.includes(d.day)
+                const isActive = d.day === currentDay && !isDone
+                const isLocked = d.day > currentDay && !isDone
+                return (
+                  <div
+                    key={d.day}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '14px 16px', borderRadius: 14,
+                      border: `1px solid ${isActive ? C.coral : C.border}`,
+                      background: isActive ? C.coralBg : isDone ? C.bg : C.surface,
+                      opacity: isLocked ? 0.45 : 1, transition: 'all .15s',
+                    }}
+                  >
+                    {/* Circle */}
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: isDone ? C.teal : isActive ? C.coral : C.border,
+                      color: isDone || isActive ? '#fff' : C.inkSoft,
+                      fontSize: isDone ? 14 : 13, fontWeight: 700, fontFamily: SANS,
+                    }}>
+                      {isDone ? '✓' : d.day}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                        <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 700, color: isActive ? C.coral : isDone ? C.inkMid : isLocked ? C.inkFaint : C.ink }}>
+                          {d.title}
+                        </p>
+                        {d.type === 'user-choice' && !isDone && (
+                          <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.blue, background: C.blueBg, padding: '1px 7px', borderRadius: 20 }}>
+                            YOUR CHOICE
+                          </span>
+                        )}
+                      </div>
+                      {!isLocked ? (
+                        <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 12, fontStyle: 'italic', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {d.focus}
+                        </p>
+                      ) : (
+                        <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>🔒 Complete Day {d.day - 1} first</p>
+                      )}
+                    </div>
+
+                    {isActive && (
+                      <button
+                        onClick={() => onStartDay(d)}
+                        style={{ background: C.coral, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 13, fontWeight: 700, fontFamily: SANS, flexShrink: 0 }}
+                      >
+                        Go →
+                      </button>
+                    )}
+                    {isDone && (
+                      <span style={{ fontFamily: SANS, fontSize: 11, color: C.teal, fontWeight: 700, flexShrink: 0 }}>✓ Done</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// STORYLAB SCREEN (archived — kept in codebase)
 // ═══════════════════════════════════════════════
 function StorylabScreen({ storylab, setStorylab, setScreen, onStartMission }) {
   const currentDay = storylab.currentDay || 1
@@ -1961,32 +2367,35 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
         </button>
       ))}
 
-      {/* Storylab link */}
+      {/* Daily Rep link */}
       <button
-        onClick={() => setScreen('storylab')}
+        onClick={() => setScreen('daily-rep')}
         style={{
           width: '100%', textAlign: 'left', padding: '20px',
           borderRadius: 16, border: `1.5px solid ${C.border}`,
           background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
+          transition: 'border-color .15s, box-shadow .15s',
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(232,87,42,.1)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
       >
         <div style={{
           width: 48, height: 48, borderRadius: 12,
           background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 22, flexShrink: 0,
-        }}>✦</div>
+        }}>🎯</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16, marginBottom: 4 }}>Storylab</p>
+          <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16, marginBottom: 4 }}>Daily Rep</p>
           <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
-            30 days of daily storytelling practice. Build your narrative voice.
+            30 days of professional conversation practice. One rep a day builds mastery.
           </p>
           <span style={{
             display: 'inline-block', fontFamily: SANS, fontSize: 11, fontWeight: 700,
-            color: C.inkSoft, background: C.bg, padding: '3px 10px', borderRadius: 20,
-            letterSpacing: '.04em', border: `1px solid ${C.border}`,
+            color: C.coral, background: C.coralBg, padding: '3px 10px', borderRadius: 20,
+            letterSpacing: '.04em',
           }}>
-            30 MISSIONS
+            30 DAYS
           </span>
         </div>
         <span style={{ color: C.inkFaint, fontSize: 18, flexShrink: 0, alignSelf: 'center' }}>›</span>
@@ -2155,6 +2564,12 @@ export default function App() {
   const [sessions,  setSessions]  = useState([])
   const [storylab,  setStorylab]  = useState({ currentDay: 1, completedDays: [] })
 
+  // Daily Rep state
+  const DAILY_REP_DEFAULTS = { currentDay: 1, streak: 0, longestStreak: 0, completedDays: [], reflections: {}, startDate: null, lastCompletedDate: null }
+  const [dailyRep,         setDailyRep]         = useState(DAILY_REP_DEFAULTS)
+  const [activeDailyRepDay, setActiveDailyRepDay] = useState(null)   // the day object currently being worked on
+  const [pendingDailyRepDay, setPendingDailyRepDay] = useState(null) // set when user-choice day sends user to scenario picker
+
   // Onboarding state
   const [obName, setObName] = useState('')
   const [obRole, setObRole] = useState('')
@@ -2170,12 +2585,14 @@ export default function App() {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedUser = lsGet(LS.user, null)
+    const savedUser     = lsGet(LS.user, null)
     const savedSessions = lsGet(LS.sessions, [])
     const savedStorylab = lsGet(LS.storylab, { currentDay: 1, completedDays: [] })
+    const savedDailyRep = lsGet(LS.dailyRep, DAILY_REP_DEFAULTS)
 
     setSessions(savedSessions)
     setStorylab(savedStorylab)
+    setDailyRep(savedDailyRep)
 
     if (savedUser?.onboarded) {
       setUser(savedUser)
@@ -2211,7 +2628,9 @@ export default function App() {
   }
 
   // Start a structured scenario (from a track)
+  // Also handles user-choice Daily Rep days — checks pendingDailyRepDay
   const startScenario = (scenarioData, difficulty) => {
+    const isForDailyRep = !!pendingDailyRepDay
     setCurrentSession({
       scenario: scenarioData.id,
       context: scenarioData.context,
@@ -2220,19 +2639,83 @@ export default function App() {
       difficulty: difficulty || scenarioData.difficulty_default || 'medium',
       scenarioData,
       userRole: user?.role || 'all',
+      isDailyRep: isForDailyRep,
+      dailyRepDay: isForDailyRep ? pendingDailyRepDay.day : undefined,
+    })
+    if (isForDailyRep) setPendingDailyRepDay(null)
+    setScreen('simulation')
+  }
+
+  // Start a Daily Rep scenario (mini or track — not user-choice)
+  const startDailyRepScenario = (scenarioData, difficulty, dayNumber) => {
+    setCurrentSession({
+      scenario: scenarioData.id,
+      context: scenarioData.context,
+      userMessage: '',
+      feedback: null,
+      difficulty: difficulty || scenarioData.difficulty_default || 'medium',
+      scenarioData,
+      userRole: user?.role || 'all',
+      isDailyRep: true,
+      dailyRepDay: dayNumber,
     })
     setScreen('simulation')
   }
 
-  // Start a Storylab mission
+  // Navigate to insight → briefing for a Daily Rep day
+  const startDailyRep = (day) => {
+    setActiveDailyRepDay(day)
+    setScreen('daily-rep-insight')
+  }
+
+  // Mark a Daily Rep day complete, update streak, save reflection
+  const completeDailyRep = (dayNumber, reflection) => {
+    const today       = new Date().toDateString()
+    const yesterday   = new Date(Date.now() - 86400000).toDateString()
+    const last        = dailyRep.lastCompletedDate
+    const alreadyDone = (dailyRep.completedDays || []).includes(dayNumber)
+
+    if (alreadyDone) {
+      setScreen('home')
+      setActiveTab('home')
+      return
+    }
+
+    let newStreak = dailyRep.streak || 0
+    if (last === yesterday) {
+      newStreak = newStreak + 1
+    } else if (last === today) {
+      // already counted today
+    } else {
+      newStreak = 1
+    }
+
+    const newLongest     = Math.max(dailyRep.longestStreak || 0, newStreak)
+    const completedDays  = [...(dailyRep.completedDays || []), dayNumber]
+    const nextDay        = Math.min(dayNumber + 1, 30)
+    const newDailyRep    = {
+      ...dailyRep,
+      currentDay: nextDay,
+      completedDays,
+      streak: newStreak,
+      longestStreak: newLongest,
+      lastCompletedDate: today,
+      reflections: { ...(dailyRep.reflections || {}), [dayNumber]: reflection },
+      startDate: dailyRep.startDate || today,
+    }
+    setDailyRep(newDailyRep)
+    lsSet(LS.dailyRep, newDailyRep)
+  }
+
+  // Start a Storylab mission (archived — kept for backward compatibility)
   const startMission = (mission) => {
     setCurrentSession({ scenario: 'storylab', context: mission.prompt, userMessage: '', feedback: null, difficulty: 'medium', userRole: user?.role || 'all' })
     setActiveTab('coach')
     setScreen('practice')
   }
 
-  const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab']
-  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation'].includes(screen)
+  const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab', 'daily-rep', 'daily-rep-briefing', 'daily-rep-debrief']
+  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation', 'daily-rep-insight'].includes(screen)
 
   const renderScreen = () => {
     switch (screen) {
@@ -2262,9 +2745,10 @@ export default function App() {
           <HomeScreen
             user={user}
             sessions={sessions}
-            storylab={storylab}
-            setScreen={(s) => { setScreen(s); if (['coach','progress','storylab'].includes(s)) setActiveTab(s) }}
+            dailyRep={dailyRep}
+            setScreen={(s) => { setScreen(s); if (['coach','progress','daily-rep'].includes(s)) setActiveTab(s === 'daily-rep' ? 'home' : s) }}
             setActiveTrack={setActiveTrack}
+            onStartDay={startDailyRep}
             onResumeSession={(s) => {
               setCurrentSession(s)
               if (s.feedback) {
@@ -2394,6 +2878,59 @@ export default function App() {
 
       case 'progress':
         return <ProgressScreen sessions={sessions} setScreen={setScreen} />
+
+      case 'daily-rep':
+        return (
+          <DailyRepScreen
+            dailyRep={dailyRep}
+            setScreen={setScreen}
+            onStartDay={startDailyRep}
+          />
+        )
+
+      case 'daily-rep-insight':
+        return (
+          <DailyRepInsightScreen
+            day={activeDailyRepDay}
+            onContinue={() => setScreen('daily-rep-briefing')}
+          />
+        )
+
+      case 'daily-rep-briefing': {
+        const bScenario = getDailyRepScenario(activeDailyRepDay)
+        return (
+          <DailyRepBriefingScreen
+            day={activeDailyRepDay}
+            scenario={bScenario}
+            setScreen={setScreen}
+            onBegin={(scenarioData, difficulty) => {
+              startDailyRepScenario(scenarioData, difficulty, activeDailyRepDay?.day)
+            }}
+            onChooseScenario={() => {
+              // User-choice day: send to scenario picker, tag session as Daily Rep
+              setPendingDailyRepDay(activeDailyRepDay)
+              setActiveTab('scenarios')
+              setScreen('scenarios')
+            }}
+          />
+        )
+      }
+
+      case 'daily-rep-debrief': {
+        // Find the day data for the session that just completed
+        const debriefDay = activeDailyRepDay ||
+          DAILY_REP_PROGRAM.find((d) => d.day === currentSession?.dailyRepDay) ||
+          DAILY_REP_PROGRAM[Math.min((dailyRep.currentDay || 1) - 1, 29)]
+        return (
+          <DailyRepDebriefScreen
+            day={debriefDay}
+            setScreen={(s) => { setScreen(s); if (s === 'home') setActiveTab('home') }}
+            onComplete={(reflection) => {
+              completeDailyRep(debriefDay?.day || dailyRep.currentDay, reflection)
+            }}
+          />
+        )
+      }
 
       case 'storylab':
         return (
