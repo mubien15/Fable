@@ -43,6 +43,19 @@ const MISSIONS = [
 ]
 
 // ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+
+// Find a scenario + its parent track from ALL_TRACKS by scenario id
+function findTrackScenario(scenarioId) {
+  for (const track of ALL_TRACKS) {
+    const scenario = track.scenarios.find((sc) => sc.id === scenarioId)
+    if (scenario) return { scenario, track }
+  }
+  return null
+}
+
+// ═══════════════════════════════════════════════
 // STORAGE HELPERS
 // ═══════════════════════════════════════════════
 const LS = {
@@ -407,7 +420,7 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════
-function HomeScreen({ user, sessions, storylab, setScreen, setScenario }) {
+function HomeScreen({ user, sessions, storylab, setScreen, setScenario, onResumeSession }) {
   const greeting = (() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
@@ -496,7 +509,11 @@ function HomeScreen({ user, sessions, storylab, setScreen, setScenario }) {
             RECENT SESSIONS
           </p>
           {sessions.slice(-3).reverse().map((s) => {
-            const chip = SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario }
+            // Prefer track scenario title/icon; fall back to chip or raw id
+            const trackMatch = findTrackScenario(s.scenario)
+            const chip = trackMatch
+              ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
+              : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario || 'Session' }
             return (
               <div key={s.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
@@ -512,9 +529,9 @@ function HomeScreen({ user, sessions, storylab, setScreen, setScenario }) {
                     </p>
                   )}
                 </div>
-                <button onClick={() => setScreen('coach')} style={{
+                <button onClick={() => onResumeSession(s)} style={{
                   background: 'none', border: 'none', color: C.coral, fontSize: 13, fontWeight: 700, fontFamily: SANS, flexShrink: 0,
-                }}>Resume →</button>
+                }}>View →</button>
               </div>
             )
           })}
@@ -1780,6 +1797,26 @@ export default function App() {
             storylab={storylab}
             setScreen={(s) => { setScreen(s); if (['coach','progress','storylab'].includes(s)) setActiveTab(s) }}
             setScenario={(scenario) => setCurrentSession((prev) => ({ ...prev, context: scenario }))}
+            onResumeSession={(s) => {
+              setCurrentSession(s)
+              if (s.feedback) {
+                // Coached session — show its feedback
+                setScreen('feedback')
+                setActiveTab('coach')
+              } else {
+                // Track simulation or storylab — navigate to the right track
+                const found = findTrackScenario(s.scenario)
+                if (found) {
+                  setActiveTrack(found.track)
+                  setScreen('track-scenarios')
+                  setActiveTab('scenarios')
+                } else {
+                  // Storylab or other — go to coach
+                  setScreen('coach')
+                  setActiveTab('coach')
+                }
+              }
+            }}
           />
         )
 
