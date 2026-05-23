@@ -38,7 +38,8 @@ export default async function handler(req, res) {
 
     // ── Simulation: role-play as the counterpart ──────────────────────────
     if (mode === 'simulation') {
-      // Rebuild the full history so the model has complete context
+      // `scenario` may be a full structured object (from scenario tracks)
+      // or a plain context string (from custom coach sessions) — buildScenarioPrompt handles both
       const history = (sessionHistory || []).map((m) => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content,
@@ -47,7 +48,7 @@ export default async function handler(req, res) {
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 300,
+        max_tokens: 400,
         system: buildScenarioPrompt(scenario, difficulty),
         messages: history,
       })

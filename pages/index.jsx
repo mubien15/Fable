@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { ALL_TRACKS } from '../data/tracks'
 
 // ═══════════════════════════════════════════════
 // DESIGN TOKENS
@@ -214,10 +215,10 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
 
 function BottomNav({ active, onChange }) {
   const tabs = [
-    { id: 'home',      icon: '⌂',  label: 'Home'     },
-    { id: 'coach',     icon: '◎',  label: 'Coach'    },
-    { id: 'progress',  icon: '◈',  label: 'Progress' },
-    { id: 'storylab',  icon: '✦',  label: 'Storylab' },
+    { id: 'home',      icon: '⌂',  label: 'Home'      },
+    { id: 'coach',     icon: '◎',  label: 'Coach'     },
+    { id: 'progress',  icon: '◈',  label: 'Progress'  },
+    { id: 'scenarios', icon: '⊞',  label: 'Scenarios' },
   ]
   return (
     <nav style={{
@@ -851,9 +852,18 @@ function FeedbackScreen({ session, setScreen, setSessions, sessions, storylab, s
 // SIMULATION SCREEN
 // ═══════════════════════════════════════════════
 function SimulationScreen({ session, setScreen, setSessions, sessions }) {
-  const [messages, setMessages] = useState([
-    { role: 'coach', content: "Now let's make it real. I'll play the other person. Respond naturally." },
-  ])
+  const [messages, setMessages] = useState(() => {
+    const msgs = [
+      { role: 'coach', content: session?.scenarioData
+          ? `Ready. I'll play ${session.scenarioData.counterpartRole.split('—')[0].trim()}. Respond when you're ready.`
+          : "Now let's make it real. I'll play the other person. Respond naturally." },
+    ]
+    // Pre-load the scenario's opening line so the user responds to it immediately
+    if (session?.scenarioData?.opening_line) {
+      msgs.push({ role: 'other', content: session.scenarioData.opening_line })
+    }
+    return msgs
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [turn, setTurn] = useState(0)
@@ -921,7 +931,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'simulation',
-          scenario: session?.context,
+          // Pass full scenario object if available (gives buildScenarioPrompt rich context),
+          // otherwise fall back to the plain context string
+          scenario: session?.scenarioData || session?.context,
           userMessage: text,
           sessionHistory: history.slice(0, -1),
           difficulty: session?.difficulty || 'medium',
@@ -1383,6 +1395,220 @@ function StorylabScreen({ storylab, setStorylab, setScreen, onStartMission }) {
 }
 
 // ═══════════════════════════════════════════════
+// SCENARIOS SCREEN (track list)
+// ═══════════════════════════════════════════════
+function ScenariosScreen({ setScreen, setActiveTrack }) {
+  return (
+    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 6 }}>Scenarios</h1>
+      <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
+        Structured practice for real professional situations.
+      </p>
+
+      {/* Track cards */}
+      {ALL_TRACKS.map((track) => (
+        <button
+          key={track.id}
+          onClick={() => { setActiveTrack(track); setScreen('track-scenarios') }}
+          style={{
+            width: '100%', textAlign: 'left', marginBottom: 14, padding: '20px',
+            borderRadius: 16, border: `1.5px solid ${C.border}`,
+            background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
+            transition: 'border-color .15s, box-shadow .15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(255,107,61,.1)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
+        >
+          <div style={{
+            width: 48, height: 48, borderRadius: 12, background: C.coralBg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 22, flexShrink: 0,
+          }}>
+            {track.icon}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16, marginBottom: 4 }}>
+              {track.title}
+            </p>
+            <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
+              {track.description}
+            </p>
+            <span style={{
+              display: 'inline-block', fontFamily: SANS, fontSize: 11, fontWeight: 700,
+              color: C.coral, background: C.coralBg, padding: '3px 10px', borderRadius: 20,
+              letterSpacing: '.04em',
+            }}>
+              {track.scenarios.length} SCENARIOS
+            </span>
+          </div>
+          <span style={{ color: C.inkFaint, fontSize: 18, flexShrink: 0, alignSelf: 'center' }}>›</span>
+        </button>
+      ))}
+
+      {/* Storylab link */}
+      <button
+        onClick={() => setScreen('storylab')}
+        style={{
+          width: '100%', textAlign: 'left', padding: '20px',
+          borderRadius: 16, border: `1.5px solid ${C.border}`,
+          background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
+        }}
+      >
+        <div style={{
+          width: 48, height: 48, borderRadius: 12,
+          background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 22, flexShrink: 0,
+        }}>✦</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16, marginBottom: 4 }}>Storylab</p>
+          <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
+            30 days of daily storytelling practice. Build your narrative voice.
+          </p>
+          <span style={{
+            display: 'inline-block', fontFamily: SANS, fontSize: 11, fontWeight: 700,
+            color: C.inkSoft, background: C.bg, padding: '3px 10px', borderRadius: 20,
+            letterSpacing: '.04em', border: `1px solid ${C.border}`,
+          }}>
+            30 MISSIONS
+          </span>
+        </div>
+        <span style={{ color: C.inkFaint, fontSize: 18, flexShrink: 0, alignSelf: 'center' }}>›</span>
+      </button>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// TRACK SCENARIOS SCREEN (scenario list + difficulty picker)
+// ═══════════════════════════════════════════════
+const DIFFICULTY_META = {
+  easy:   { label: 'Easy',   color: C => C.teal,   bg: C => C.tealBg,   desc: 'Cooperative, open to dialogue'         },
+  medium: { label: 'Medium', color: C => C.blue,   bg: C => C.blueBg,   desc: 'Mild resistance, needs convincing'     },
+  hard:   { label: 'Hard',   color: C => C.coral,  bg: C => C.coralBg,  desc: 'Defensive, will push back hard'        },
+}
+
+function TrackScenariosScreen({ track, setScreen, onStartScenario }) {
+  const [selected, setSelected] = useState(null)
+  const [difficulty, setDifficulty] = useState('medium')
+
+  if (!track) { setScreen('scenarios'); return null }
+
+  const handleSelect = (scenario) => {
+    setSelected(scenario)
+    setDifficulty(scenario.difficulty_default || 'medium')
+  }
+
+  return (
+    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+      <SubHeader title={track.title} onBack={() => setScreen('scenarios')} />
+
+      <p style={{ color: C.inkSoft, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+        {track.description}
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {track.scenarios.map((scenario) => {
+          const isSelected = selected?.id === scenario.id
+          const diffDefault = DIFFICULTY_META[scenario.difficulty_default] || DIFFICULTY_META.medium
+
+          return (
+            <div
+              key={scenario.id}
+              style={{
+                borderRadius: 16, border: `1.5px solid ${isSelected ? C.coral : C.border}`,
+                background: isSelected ? C.coralBg : C.surface,
+                overflow: 'hidden', transition: 'border-color .2s, background .2s',
+              }}
+            >
+              {/* Scenario header — always visible */}
+              <button
+                onClick={() => handleSelect(isSelected ? null : scenario)}
+                style={{
+                  width: '100%', textAlign: 'left', padding: '18px 20px',
+                  background: 'transparent', border: 'none', display: 'flex', gap: 14, alignItems: 'flex-start',
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <p style={{ fontFamily: SANS, fontWeight: 700, color: isSelected ? C.coral : C.ink, fontSize: 15 }}>
+                      {scenario.title}
+                    </p>
+                    <span style={{
+                      fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
+                      padding: '2px 8px', borderRadius: 20,
+                      color: diffDefault.color(C), background: diffDefault.bg(C),
+                    }}>
+                      {diffDefault.label.toUpperCase()}
+                    </span>
+                  </div>
+                  <p style={{
+                    fontFamily: SERIF, color: C.inkSoft, fontSize: 13, lineHeight: 1.55,
+                    display: '-webkit-box', WebkitLineClamp: isSelected ? 100 : 2,
+                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {scenario.context}
+                  </p>
+                </div>
+                <span style={{ color: C.inkFaint, fontSize: 16, flexShrink: 0, marginTop: 2, transform: isSelected ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>›</span>
+              </button>
+
+              {/* Expanded: coaching focus + difficulty picker + start */}
+              {isSelected && (
+                <div className="fade-in" style={{ padding: '0 20px 20px' }}>
+                  {/* Coaching focus */}
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 8 }}>
+                      WHAT YOU'LL PRACTISE
+                    </p>
+                    {scenario.coaching_focus.map((f, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, alignItems: 'flex-start' }}>
+                        <span style={{ color: C.coral, fontSize: 12, marginTop: 1, flexShrink: 0 }}>◆</span>
+                        <p style={{ fontFamily: SERIF, color: C.inkMid, fontSize: 13, lineHeight: 1.5 }}>{f}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Difficulty picker */}
+                  <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 8 }}>
+                    DIFFICULTY
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+                    {Object.entries(DIFFICULTY_META).map(([key, meta]) => (
+                      <button
+                        key={key}
+                        onClick={() => setDifficulty(key)}
+                        style={{
+                          flex: 1, padding: '10px 8px', borderRadius: 12, border: `1.5px solid ${difficulty === key ? meta.color(C) : C.border}`,
+                          background: difficulty === key ? meta.bg(C) : C.surface,
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                          transition: 'all .15s',
+                        }}
+                      >
+                        <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: difficulty === key ? meta.color(C) : C.inkSoft }}>
+                          {meta.label}
+                        </span>
+                        <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
+                          {meta.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <Btn onClick={() => onStartScenario(scenario, difficulty)}>
+                    Start scenario →
+                  </Btn>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
 // APP ROOT
 // ═══════════════════════════════════════════════
 export default function App() {
@@ -1398,6 +1624,9 @@ export default function App() {
 
   // Session state
   const [currentSession, setCurrentSession] = useState(null)
+
+  // Scenario track state
+  const [activeTrack, setActiveTrack] = useState(null)
   // currentSession = { scenario, context, userMessage, feedback }
 
   // Load from localStorage on mount
@@ -1442,6 +1671,19 @@ export default function App() {
     setCurrentSession((prev) => ({ ...prev, userMessage, feedback }))
   }
 
+  // Start a structured scenario (from a track)
+  const startScenario = (scenarioData, difficulty) => {
+    setCurrentSession({
+      scenario: scenarioData.id,
+      context: scenarioData.context,
+      userMessage: '',
+      feedback: null,
+      difficulty: difficulty || scenarioData.difficulty_default || 'medium',
+      scenarioData,   // full object — used by SimulationScreen for opening_line and buildScenarioPrompt
+    })
+    setScreen('simulation')
+  }
+
   // Start a Storylab mission
   const startMission = (mission) => {
     setCurrentSession({ scenario: 'storylab', context: mission.prompt, userMessage: '', feedback: null, difficulty: 'medium' })
@@ -1449,7 +1691,7 @@ export default function App() {
     setScreen('practice')
   }
 
-  const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share']
+  const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab']
   const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation'].includes(screen)
 
   const renderScreen = () => {
@@ -1541,6 +1783,23 @@ export default function App() {
             setStorylab={(sl) => { setStorylab(sl); lsSet(LS.storylab, sl) }}
             setScreen={setScreen}
             onStartMission={startMission}
+          />
+        )
+
+      case 'scenarios':
+        return (
+          <ScenariosScreen
+            setScreen={setScreen}
+            setActiveTrack={setActiveTrack}
+          />
+        )
+
+      case 'track-scenarios':
+        return (
+          <TrackScenariosScreen
+            track={activeTrack}
+            setScreen={setScreen}
+            onStartScenario={startScenario}
           />
         )
 
