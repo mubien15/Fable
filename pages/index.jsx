@@ -582,69 +582,514 @@ function HomeScreen({ user, sessions, storylab, setScreen, onResumeSession, setA
 }
 
 // ═══════════════════════════════════════════════
-// COACH / PREPARE SCREEN
+// COACH EXPERIENCE — CONSTANTS
 // ═══════════════════════════════════════════════
-function CoachScreen({ user, initialScenario, setScreen, onStartSession }) {
-  const [chip, setChip] = useState(SCENARIO_CHIPS[0].id)
-  const [context, setContext] = useState(initialScenario || user.upcomingMoment || '')
+const LIFE_AREAS = [
+  { id: 'work',          icon: '💼', label: 'Work & Career'    },
+  { id: 'relationships', icon: '🤝', label: 'Relationships'    },
+  { id: 'family',        icon: '👨‍👩‍👧', label: 'Family'          },
+  { id: 'clarity',       icon: '🧠', label: 'Personal Clarity' },
+]
+const AREA_META = { work: '💼', relationships: '🤝', family: '👨‍👩‍👧', clarity: '🧠', thinking: '💭' }
 
-  const start = () => {
-    if (context.trim().length < 10) return
-    onStartSession({ scenario: chip, context: context.trim() })
-    setScreen('practice')
-  }
+const SITUATION_QUESTIONS = {
+  work:          "What's the work situation on your mind? Describe it as if you're telling a trusted colleague.",
+  relationships: "What's happening in this relationship that you want to think through?",
+  family:        "What's the family situation you're navigating right now?",
+  clarity:       "What's the thing you keep thinking about but haven't been able to resolve?",
+}
+const OBSTACLE_QUESTION = "What makes this hard for you personally? Not the situation itself — but what about it feels difficult or stuck?"
+const OUTCOME_QUESTION   = "When you imagine this going well — what does that actually look like? What would feel like a good outcome?"
+
+// ═══════════════════════════════════════════════
+// COACH ENTRY SCREEN
+// ═══════════════════════════════════════════════
+function CoachScreen({ sessions, setScreen, onStartMode }) {
+  const coachSessions = sessions.filter((s) => s.type === 'coach').slice(-2).reverse()
+
+  const ModeCard = ({ icon, title, desc, btnLabel, mode }) => (
+    <div style={{
+      background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
+      padding: '24px', marginBottom: 14, boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <span style={{ fontSize: 26 }}>{icon}</span>
+        <p style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600, color: C.blue, lineHeight: 1.2 }}>{title}</p>
+      </div>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, lineHeight: 1.65, marginBottom: 20 }}>{desc}</p>
+      <Btn onClick={() => onStartMode(mode)} style={{ borderRadius: 50 }}>{btnLabel}</Btn>
+    </div>
+  )
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 120px' }}>
-      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 6 }}>Your coach</h1>
-      <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
-        Describe the situation and what you want to say. Your coach will listen and give you real feedback.
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Coach</h1>
+      <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, marginBottom: 28, lineHeight: 1.5 }}>
+        Your personal thinking partner
       </p>
 
-      {/* Scenario chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {SCENARIO_CHIPS.map((s) => (
+      <ModeCard
+        icon="🎯"
+        title="I have a specific situation"
+        desc="A conversation coming up, a decision you're stuck on, or something you need to prepare for."
+        btnLabel="Let's work on it →"
+        mode="specific"
+      />
+      <ModeCard
+        icon="💭"
+        title="I need to think out loud"
+        desc="Something is on your mind but you're not sure what you need yet. Just start talking."
+        btnLabel="Start talking →"
+        mode="thinking"
+      />
+
+      {coachSessions.length > 0 && (
+        <div style={{ marginTop: 28 }}>
+          <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 14 }}>
+            Recent Coach Sessions
+          </p>
+          {coachSessions.map((s) => (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>{s.lifeAreaIcon || '💭'}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {s.label || 'Coaching session'}
+                </p>
+                <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>{s.date}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// COACH AREA SCREEN (life area selector)
+// ═══════════════════════════════════════════════
+function CoachAreaScreen({ setScreen, onSelectArea }) {
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <SubHeader title="Coach" onBack={() => setScreen('coach')} />
+      <p style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600, color: C.ink, marginBottom: 6, lineHeight: 1.35 }}>
+        What area is this in?
+      </p>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, marginBottom: 28 }}>
+        This helps the Coach ask the right questions.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {LIFE_AREAS.map((area) => (
           <button
-            key={s.id}
-            onClick={() => setChip(s.id)}
+            key={area.id}
+            onClick={() => onSelectArea(area.id)}
             style={{
-              padding: '8px 14px', borderRadius: 30, border: `1.5px solid ${chip === s.id ? C.coral : C.border}`,
-              background: chip === s.id ? C.coralBg : C.surface,
-              color: chip === s.id ? C.coral : C.inkMid,
-              fontSize: 14, fontWeight: chip === s.id ? 700 : 400, fontFamily: SANS,
-              transition: 'all .15s',
+              padding: '24px 16px', borderRadius: 16, border: `1.5px solid ${C.border}`,
+              background: C.surface, textAlign: 'center',
+              boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+              transition: 'border-color .15s, background .15s',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.background = C.blueBg }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.surface }}
           >
-            {s.icon} {s.label}
+            <span style={{ fontSize: 30, display: 'block', marginBottom: 10 }}>{area.icon}</span>
+            <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.ink, lineHeight: 1.3 }}>{area.label}</p>
           </button>
         ))}
       </div>
+    </div>
+  )
+}
 
-      {/* Situation textarea */}
-      <label style={{ display: 'block', fontFamily: SANS, color: C.inkMid, fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-        Describe your situation
-      </label>
-      <VoiceTextarea
-        value={context}
-        onChange={setContext}
-        placeholder="Who's involved? What happened? What do you want to achieve?"
-        minHeight={160}
-      />
-      <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12, marginTop: 6, marginBottom: 24 }}>
-        {context.length} characters
+// ═══════════════════════════════════════════════
+// COACH GUIDED SCREEN (3 questions)
+// ═══════════════════════════════════════════════
+function CoachGuidedScreen({ lifeArea, setScreen, onComplete }) {
+  const [step, setStep]   = useState(0)
+  const [answers, setAnswers] = useState({ situation: '', obstacle: '', outcome: '' })
+  const [current, setCurrent] = useState('')
+
+  const STEPS = [
+    { key: 'situation', question: SITUATION_QUESTIONS[lifeArea] || SITUATION_QUESTIONS.work },
+    { key: 'obstacle',  question: OBSTACLE_QUESTION },
+    { key: 'outcome',   question: OUTCOME_QUESTION  },
+  ]
+
+  const goBack = () => {
+    if (step > 0) { setStep((s) => s - 1); setCurrent(answers[STEPS[step - 1].key]) }
+    else setScreen('coach-area')
+  }
+
+  const next = () => {
+    if (current.trim().length < 5) return
+    const key = STEPS[step].key
+    const newAnswers = { ...answers, [key]: current.trim() }
+    setAnswers(newAnswers)
+    if (step < 2) { setStep((s) => s + 1); setCurrent('') }
+    else onComplete(newAnswers)
+  }
+
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <SubHeader title="Coach" onBack={goBack} />
+
+      {/* Progress bar */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+        {[0, 1, 2].map((i) => (
+          <div key={i} style={{
+            flex: 1, height: 4, borderRadius: 4,
+            background: i <= step ? C.blue : C.border,
+            transition: 'background .3s',
+          }} />
+        ))}
+      </div>
+
+      <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 14 }}>
+        Question {step + 1} of 3
+      </p>
+      <p style={{ fontFamily: SERIF, fontSize: 19, color: C.ink, lineHeight: 1.55, marginBottom: 24 }}>
+        {STEPS[step].question}
       </p>
 
-      <Btn onClick={start} disabled={context.trim().length < 10}>
-        Start my session →
-      </Btn>
+      <VoiceTextarea value={current} onChange={setCurrent} placeholder="Take your time…" minHeight={140} />
 
-      {/* Role reminder */}
-      {user.role && user.role !== 'all' && (
-        <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 12, background: C.blueBg }}>
-          <p style={{ fontFamily: SERIF, color: C.blue, fontSize: 13, fontStyle: 'italic' }}>
-            {ROLES.find((r) => r.id === user.role)?.icon} {ROLES.find((r) => r.id === user.role)?.label}
+      <div style={{ marginTop: 20 }}>
+        <Btn onClick={next} disabled={current.trim().length < 5}>
+          {step < 2 ? 'Next →' : 'Talk to Coach →'}
+        </Btn>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// COACH FREEFORM SCREEN (mode 2 entry)
+// ═══════════════════════════════════════════════
+function CoachFreeformScreen({ setScreen, onStart }) {
+  const [text, setText] = useState('')
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <SubHeader title="Coach" onBack={() => setScreen('coach')} />
+      <p style={{ fontFamily: SERIF, fontSize: 17, color: C.inkMid, lineHeight: 1.65, marginBottom: 10 }}>
+        Just start wherever feels right. There's no wrong way to begin.
+      </p>
+      <p style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 600, color: C.ink, marginBottom: 24 }}>
+        What's on your mind?
+      </p>
+      <VoiceTextarea value={text} onChange={setText} placeholder="Type or speak whatever is with you right now…" minHeight={200} />
+      <div style={{ marginTop: 20 }}>
+        <Btn onClick={() => text.trim().length >= 10 && onStart(text.trim())} disabled={text.trim().length < 10}
+          style={{ borderRadius: 50 }}>
+          I'm ready →
+        </Btn>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// COACH CONVERSATION SCREEN
+// ═══════════════════════════════════════════════
+function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
+  const [messages, setMessages] = useState([])
+  const [input,    setInput]    = useState('')
+  const [loading,  setLoading]  = useState(true)
+  const [listening, setListening] = useState(false)
+  const bottomRef  = useRef(null)
+  const inputRef   = useRef(null)
+  const recRef     = useRef(null)
+  const finalRef   = useRef('')
+  const initialCtx = useRef('')
+
+  // Build the initial user message from session data
+  useEffect(() => {
+    let ctx = ''
+    if (coachSession?.mode === 'thinking') {
+      ctx = coachSession.freeformText || ''
+    } else if (coachSession?.mode === 'specific' && coachSession?.guidedAnswers) {
+      const { situation, obstacle, outcome } = coachSession.guidedAnswers
+      ctx = [
+        situation && `My situation: ${situation}`,
+        obstacle  && `What makes it hard: ${obstacle}`,
+        outcome   && `What good looks like: ${outcome}`,
+      ].filter(Boolean).join('\n\n')
+    }
+    initialCtx.current = ctx
+    fetchCoach([], ctx)
+  }, [])
+
+  const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
+
+  const fetchCoach = async (history, userMessage) => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/coaching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'coach',
+          coachMode: coachSession?.mode,
+          lifeArea: coachSession?.lifeArea,
+          guidedAnswers: coachSession?.guidedAnswers,
+          userMessage,
+          sessionHistory: history,
+        }),
+      })
+      const data = await res.json()
+      setMessages((prev) => [...prev, { role: 'coach', content: data.reply }])
+    } catch {
+      setMessages((prev) => [...prev, { role: 'coach', content: "I'm here. Take your time." }])
+    } finally {
+      setLoading(false)
+      scrollDown()
+    }
+  }
+
+  const toggleMic = () => {
+    if (listening) { recRef.current?.stop(); setListening(false); return }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) { alert('Voice input requires Chrome or Safari 17+.'); return }
+    const r = new SR()
+    r.continuous = true; r.interimResults = true; r.lang = 'en-US'
+    finalRef.current = input
+    r.onresult = (e) => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
+        else interim += e.results[i][0].transcript
+      }
+      setInput(finalRef.current + interim)
+    }
+    r.onerror = () => setListening(false)
+    r.onend   = () => setListening(false)
+    r.start(); recRef.current = r; setListening(true)
+  }
+  const stopMic = () => { if (listening) { recRef.current?.stop(); setListening(false) } }
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text || loading) return
+    stopMic()
+
+    const userMsg   = { role: 'user', content: text }
+    const nextMsgs  = [...messages, userMsg]
+    setMessages(nextMsgs)
+    setInput('')
+    scrollDown()
+
+    // Build full history: initial context + all displayed messages except current
+    const history = []
+    if (initialCtx.current) history.push({ role: 'user', content: initialCtx.current })
+    for (const m of messages) {
+      history.push({ role: m.role === 'coach' ? 'assistant' : 'user', content: m.content })
+    }
+
+    await fetchCoach(history, text)
+    inputRef.current?.focus()
+  }
+
+  const areaIcon  = AREA_META[coachSession?.lifeArea || 'thinking'] || '💭'
+  const areaLabel = coachSession?.situationLabel || (coachSession?.mode === 'thinking' ? 'Thinking out loud' : 'Personal session')
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: C.bg }}>
+      {/* Header */}
+      <div style={{ padding: '14px 20px', borderBottom: `1px solid ${C.border}`, background: C.surface, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={() => setScreen('coach')} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20 }}>←</button>
+        <CoachAvatar size={32} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 14 }}>Coach</p>
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {areaIcon} {areaLabel}
           </p>
         </div>
+        <button
+          onClick={() => onWrapUp(messages)}
+          style={{ background: 'none', border: 'none', color: C.blue, fontSize: 13, fontWeight: 600, fontFamily: SANS, flexShrink: 0 }}
+        >
+          Wrap up
+        </button>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {loading && messages.length === 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CoachAvatar size={28} />
+            <div style={{ padding: '12px 16px', borderRadius: '16px 16px 16px 4px', background: C.surface, border: `1px solid ${C.border}` }}>
+              <Dots />
+            </div>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 8 }}>
+            {m.role === 'coach' && <CoachAvatar size={26} />}
+            <div style={{
+              maxWidth: '80%', padding: '12px 16px',
+              background: m.role === 'user' ? C.blue : C.surface,
+              color: m.role === 'user' ? '#fff' : C.ink,
+              fontSize: 15, lineHeight: 1.65, fontFamily: SERIF,
+              border: m.role === 'coach' ? `1px solid ${C.border}` : 'none',
+              borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+            }}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && messages.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CoachAvatar size={26} />
+            <div style={{ padding: '10px 14px', borderRadius: '16px 16px 16px 4px', background: C.surface, border: `1px solid ${C.border}` }}>
+              <Dots />
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.surface }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && send()}
+              placeholder={listening ? 'Listening…' : 'Reply…'}
+              style={{
+                width: '100%', padding: '12px 46px 12px 16px', borderRadius: 12,
+                border: `1.5px solid ${listening ? C.blue : C.border}`,
+                background: listening ? C.blueBg : C.bg,
+                fontSize: 15, color: C.ink, fontFamily: SERIF,
+                transition: 'border-color .15s, background .15s',
+              }}
+            />
+            <button onClick={toggleMic} style={{
+              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+              width: 30, height: 30, borderRadius: '50%', border: 'none',
+              background: listening ? C.blue : C.border,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: listening ? 'recordPulse 1.5s ease-in-out infinite' : 'none',
+              transition: 'background .2s',
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                stroke={listening ? '#fff' : C.inkSoft} strokeWidth="2" strokeLinecap="round">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            </button>
+          </div>
+          <button onClick={send} disabled={!input.trim() || loading} style={{
+            background: !input.trim() || loading ? C.blueDim : C.blue,
+            color: '#fff', border: 'none', borderRadius: 12,
+            padding: '0 18px', fontSize: 18, fontWeight: 700, height: 46, flexShrink: 0,
+          }}>→</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// COACH DEBRIEF SCREEN
+// ═══════════════════════════════════════════════
+function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) {
+  const [debrief,    setDebrief]    = useState(null)
+  const [loading,    setLoading]    = useState(true)
+  const [reflection, setReflection] = useState('')
+  const [saved,      setSaved]      = useState(false)
+
+  useEffect(() => {
+    const msgs = coachSession?.messages || []
+    if (msgs.length === 0) {
+      setDebrief({ insight: 'You showed up and started a conversation with yourself — that takes courage.', nextStep: 'Sit with what came up before deciding what to do.' })
+      setLoading(false)
+      return
+    }
+    fetch('/api/coaching', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'coach-debrief', sessionHistory: msgs }),
+    })
+      .then((r) => r.json())
+      .then((d) => setDebrief(d))
+      .catch(() => setDebrief({ insight: 'Something shifted in this conversation.', nextStep: 'Give yourself time to let it settle.' }))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const save = () => {
+    const newSession = {
+      id: Date.now(),
+      type: 'coach',
+      date: new Date().toLocaleDateString(),
+      mode: coachSession?.mode,
+      lifeArea: coachSession?.lifeArea,
+      lifeAreaIcon: AREA_META[coachSession?.lifeArea] || '💭',
+      label: coachSession?.situationLabel || 'Coaching session',
+      messages: coachSession?.messages || [],
+      reflection,
+      debrief,
+      completed: true,
+    }
+    const updated = [...sessions, newSession]
+    setSessions(updated)
+    lsSet(LS.sessions, updated)
+    setSaved(true)
+  }
+
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 8 }}>
+          Session complete
+        </p>
+        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink }}>Wrap-up</h1>
+      </div>
+
+      {loading ? (
+        <Card style={{ textAlign: 'center', padding: '32px' }}>
+          <Dots />
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 14, marginTop: 12 }}>Reflecting on your session…</p>
+        </Card>
+      ) : (
+        <>
+          <Card bg={C.blueBg} border={C.blueDim} style={{ marginBottom: 14 }}>
+            <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.blue, letterSpacing: '.06em', marginBottom: 8 }}>
+              📝 ONE THING THAT STOOD OUT
+            </p>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>{debrief?.insight}</p>
+          </Card>
+
+          <Card bg={C.tealBg} border="transparent" style={{ marginBottom: 24 }}>
+            <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '.06em', marginBottom: 8 }}>
+              💡 SOMETHING TO CARRY FORWARD
+            </p>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>{debrief?.nextStep}</p>
+          </Card>
+
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkMid, marginBottom: 12 }}>
+              What do you want to remember from this conversation?
+            </p>
+            <VoiceTextarea value={reflection} onChange={setReflection} placeholder="Your own words…" minHeight={100} />
+          </div>
+
+          {saved ? (
+            <div style={{ textAlign: 'center', padding: '14px', borderRadius: 14, background: C.tealBg, marginBottom: 14 }}>
+              <p style={{ fontFamily: SANS, color: C.teal, fontWeight: 700 }}>✓ Saved</p>
+            </div>
+          ) : (
+            <Btn onClick={save} style={{ marginBottom: 12 }}>Save reflection</Btn>
+          )}
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <Btn variant="secondary" onClick={() => setScreen('coach')} style={{ flex: 1 }}>Back to Coach</Btn>
+            <Btn variant="secondary" onClick={() => setScreen('home')} style={{ flex: 1 }}>Home</Btn>
+          </div>
+        </>
       )}
     </div>
   )
@@ -1719,7 +2164,9 @@ export default function App() {
 
   // Scenario track state
   const [activeTrack, setActiveTrack] = useState(null)
-  // currentSession = { scenario, context, userMessage, feedback }
+
+  // Coach session state
+  const [coachSession, setCoachSession] = useState(null)
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -1785,7 +2232,7 @@ export default function App() {
   }
 
   const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab']
-  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation'].includes(screen)
+  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation'].includes(screen)
 
   const renderScreen = () => {
     switch (screen) {
@@ -1841,10 +2288,71 @@ export default function App() {
       case 'coach':
         return (
           <CoachScreen
-            user={user}
-            initialScenario={currentSession?.context || ''}
+            sessions={sessions}
             setScreen={setScreen}
-            onStartSession={startSession}
+            onStartMode={(mode) => {
+              setCoachSession({ mode, lifeArea: null, guidedAnswers: null, freeformText: '', messages: [], situationLabel: '' })
+              setScreen(mode === 'specific' ? 'coach-area' : 'coach-freeform')
+            }}
+          />
+        )
+
+      case 'coach-area':
+        return (
+          <CoachAreaScreen
+            setScreen={setScreen}
+            onSelectArea={(lifeArea) => {
+              setCoachSession((prev) => ({ ...prev, lifeArea }))
+              setScreen('coach-guided')
+            }}
+          />
+        )
+
+      case 'coach-guided':
+        return (
+          <CoachGuidedScreen
+            lifeArea={coachSession?.lifeArea}
+            setScreen={setScreen}
+            onComplete={(guidedAnswers) => {
+              const words = guidedAnswers.situation.trim().split(/\s+/).slice(0, 5).join(' ')
+              const label = words.length < guidedAnswers.situation.trim().length ? words + '…' : words
+              setCoachSession((prev) => ({ ...prev, guidedAnswers, situationLabel: label }))
+              setScreen('coach-conversation')
+            }}
+          />
+        )
+
+      case 'coach-freeform':
+        return (
+          <CoachFreeformScreen
+            setScreen={setScreen}
+            onStart={(freeformText) => {
+              const words = freeformText.trim().split(/\s+/).slice(0, 5).join(' ')
+              setCoachSession((prev) => ({ ...prev, freeformText, situationLabel: words + '…' }))
+              setScreen('coach-conversation')
+            }}
+          />
+        )
+
+      case 'coach-conversation':
+        return (
+          <CoachConversationScreen
+            coachSession={coachSession}
+            setScreen={setScreen}
+            onWrapUp={(messages) => {
+              setCoachSession((prev) => ({ ...prev, messages }))
+              setScreen('coach-debrief')
+            }}
+          />
+        )
+
+      case 'coach-debrief':
+        return (
+          <CoachDebriefScreen
+            coachSession={coachSession}
+            setScreen={(s) => { setScreen(s); if (s === 'coach') setActiveTab('coach'); if (s === 'home') setActiveTab('home') }}
+            sessions={sessions}
+            setSessions={setSessions}
           />
         )
 

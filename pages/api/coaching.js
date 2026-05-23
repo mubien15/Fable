@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { buildCoachingFeedbackSystem, buildScenarioPrompt, PATTERN_SYSTEM } from '../../lib/coachPrompt'
+import { buildCoachingFeedbackSystem, buildScenarioPrompt, PATTERN_SYSTEM, buildCoachPrompt } from '../../lib/coachPrompt'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -35,6 +35,48 @@ export default async function handler(req, res) {
   } = req.body
 
   try {
+
+    // ── Personal Coach conversation ───────────────────────────────────────
+    if (mode === 'coach') {
+      const { coachMode, lifeArea, guidedAnswers, userMessage, sessionHistory } = req.body
+
+      const history = (sessionHistory || []).map((m) => ({
+        role: m.role === 'coach' ? 'assistant' : 'user',
+        content: m.content,
+      }))
+      history.push({ role: 'user', content: userMessage || 'Hello.' })
+
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 500,
+        system: buildCoachPrompt(coachMode, lifeArea, guidedAnswers),
+        messages: history,
+      })
+
+      return res.json({ reply: response.content[0].text })
+    }
+
+    // ── Coach debrief — generates insight + next step from conversation ───
+    if (mode === 'coach-debrief') {
+      const { sessionHistory } = req.body
+      const conversationText = (sessionHistory || [])
+        .map((m) => `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`)
+        .join('\n\n')
+
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 300,
+        system: `You are reflecting on a completed coaching conversation and generating a warm, specific debrief. Return valid JSON only — no markdown, no preamble.`,
+        messages: [{
+          role: 'user',
+          content: `Coaching conversation:\n\n${conversationText}\n\nGenerate a JSON debrief:\n- "insight": One thing that stood out or shifted in this conversation. 2 sentences, warm, specific to what was actually discussed.\n- "nextStep": One small, concrete next step or intention. 1 sentence, action-oriented.\n\nReturn only: {"insight": "...", "nextStep": "..."}`,
+        }],
+      })
+
+      const raw     = response.content[0].text.trim()
+      const cleaned = raw.replace(/^```json?\s*/i, '').replace(/\s*```$/, '')
+      return res.json(JSON.parse(cleaned))
+    }
 
     // ── Simulation: role-play as the counterpart ──────────────────────────
     if (mode === 'simulation') {
