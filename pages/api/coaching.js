@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 400,
+        max_tokens: 600,
         system: buildScenarioPrompt(scenario, difficulty),
         messages: history,
       })

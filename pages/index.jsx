@@ -949,9 +949,11 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
 
       const toAdd = [{ role: 'other', content: parts[0].trim() }]
       if (parts[1]) {
+        // AI decided to end — show coach note and mark done
         toAdd.push({ role: 'coach', content: parts[1].replace(':', '').trim() })
         setDone(true)
-      } else if (newTurn >= 4) {
+      } else if (newTurn >= 10) {
+        // Hard safety cap — end without coach note after 10 turns
         setDone(true)
       }
 
