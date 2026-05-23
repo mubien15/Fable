@@ -924,6 +924,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
           scenario: session?.context,
           userMessage: text,
           sessionHistory: history.slice(0, -1),
+          difficulty: session?.difficulty || 'medium',
         }),
       })
       const data = await res.json()
@@ -1432,8 +1433,8 @@ export default function App() {
   }
 
   // Start a session from coach screen
-  const startSession = ({ scenario, context }) => {
-    setCurrentSession({ scenario, context, userMessage: '', feedback: null })
+  const startSession = ({ scenario, context, difficulty = 'medium' }) => {
+    setCurrentSession({ scenario, context, userMessage: '', feedback: null, difficulty })
   }
 
   // Receive feedback from practice screen
@@ -1443,7 +1444,7 @@ export default function App() {
 
   // Start a Storylab mission
   const startMission = (mission) => {
-    setCurrentSession({ scenario: 'storylab', context: mission.prompt, userMessage: '', feedback: null })
+    setCurrentSession({ scenario: 'storylab', context: mission.prompt, userMessage: '', feedback: null, difficulty: 'medium' })
     setActiveTab('coach')
     setScreen('practice')
   }
