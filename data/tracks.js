@@ -1,4 +1,5 @@
 import { AUDIT_SCENARIOS } from './scenarios-audit'
+import { CONSULTING_SCENARIOS } from './scenarios-consulting'
 
 export const ALL_TRACKS = [
   {
@@ -8,5 +9,12 @@ export const ALL_TRACKS = [
     icon: '🔍',
     scenarios: AUDIT_SCENARIOS,
   },
-  // More tracks will be added in Parts 2 and 3
+  {
+    id: 'consulting',
+    title: 'Consulting & Client Management',
+    description: 'Navigate the real conversations of a professional services career — from missed deadlines to winning pitches.',
+    icon: '💼',
+    scenarios: CONSULTING_SCENARIOS,
+  },
+  // More tracks will be added in Part 3
 ]
