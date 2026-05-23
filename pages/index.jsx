@@ -6,14 +6,28 @@ import { ALL_TRACKS } from '../data/tracks'
 // DESIGN TOKENS
 // ═══════════════════════════════════════════════
 const C = {
-  bg: '#FFFBF5', surface: '#FFFFFF', border: '#EDE8E0',
-  coral: '#FF6B3D', coralLight: '#FF8C66', coralDim: '#FFD4C5', coralBg: '#FFF0EB',
-  blue: '#3B82C4', blueDim: '#C5DCF0', blueBg: '#EEF6FF',
+  // Backgrounds
+  bg: '#F0F4F8', surface: '#FFFFFF', surfaceSubtle: '#E8EEF4',
+  border: '#E2E8F0',
+
+  // Coral — CTAs and actions only
+  coral: '#E8572A', coralHover: '#C94520', coralLight: '#F5A07A',
+  coralDim: '#FCD5C3', coralBg: '#FEF0EB',
+
+  // Steel blue — identity, headings, active states
+  blue: '#3B82F6', blueDeep: '#1E40AF', blueDim: '#BFDBFE', blueBg: '#DBEAFE',
+
+  // Track background tints
+  trackAudit: '#EFF6FF', trackConsulting: '#F0F9FF', trackLeadership: '#F0FDF4',
+
+  // Teal — kept for positive feedback states
   teal: '#2BA084', tealBg: '#E8F7F4',
-  ink: '#1A1512', inkMid: '#4A4340', inkSoft: '#8A837C', inkFaint: '#C4BDB6',
+
+  // Text
+  ink: '#0F172A', inkMid: '#475569', inkSoft: '#64748B', inkFaint: '#94A3B8',
 }
 const SERIF = "'Lora', Georgia, serif"
-const SANS = 'system-ui, -apple-system, sans-serif'
+const SANS = "'DM Sans', system-ui, -apple-system, sans-serif"
 
 // ═══════════════════════════════════════════════
 // DATA
@@ -420,7 +434,9 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════
-function HomeScreen({ user, sessions, storylab, setScreen, setScenario, onResumeSession }) {
+const TRACK_BG = { audit: C.trackAudit, consulting: C.trackConsulting, leadership: C.trackLeadership }
+
+function HomeScreen({ user, sessions, storylab, setScreen, onResumeSession, setActiveTrack }) {
   const greeting = (() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
@@ -428,109 +444,108 @@ function HomeScreen({ user, sessions, storylab, setScreen, setScenario, onResume
     return 'Good evening'
   })()
 
-  const role = ROLES.find((r) => r.id === user.role)
   const currentMission = MISSIONS[Math.min((storylab.currentDay || 1) - 1, 29)]
   const completedCount = (storylab.completedDays || []).length
 
-  const startCoach = (scenario) => {
-    if (scenario) setScenario(scenario)
-    setScreen('coach')
-  }
+  // Surface user's recommended track first
+  const recommendedId = ROLES.find((r) => r.id === user?.role)?.recommended_track
+  const sortedTracks = [...ALL_TRACKS].sort((a, b) => {
+    if (a.id === recommendedId) return -1
+    if (b.id === recommendedId) return 1
+    return 0
+  })
+
+  const SectionLabel = ({ children }) => (
+    <p style={{
+      fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
+      textTransform: 'uppercase', color: C.blueDeep, marginBottom: 14,
+    }}>{children}</p>
+  )
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
-      {/* Greeting */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ color: C.inkSoft, fontSize: 13, fontWeight: 600, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4, fontFamily: SANS }}>
-          {greeting}
-        </p>
-        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, lineHeight: 1.2 }}>
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+
+      {/* ── Header ── */}
+      <div style={{ marginBottom: 32 }}>
+        <p style={{
+          fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: '.08em',
+          textTransform: 'uppercase', color: C.inkFaint, marginBottom: 6,
+        }}>{greeting}</p>
+        <h1 style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 700, color: C.ink, lineHeight: 1.15, marginBottom: 6 }}>
           {user.name}
         </h1>
-      </div>
-
-      {/* Quick-start bar */}
-      <div style={{ marginBottom: 20 }}>
-        <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 13, fontWeight: 600, marginBottom: 10 }}>
-          WHAT MOMENT ARE YOU PREPARING FOR?
+        <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.5 }}>
+          What conversation will you practise today?
         </p>
+      </div>
+
+      {/* ── Your Tracks ── */}
+      <SectionLabel>Your Tracks</SectionLabel>
+      {sortedTracks.map((track) => (
         <button
-          onClick={() => startCoach(user.upcomingMoment || '')}
+          key={track.id}
+          onClick={() => { setActiveTrack(track); setScreen('track-scenarios') }}
           style={{
-            width: '100%', textAlign: 'left', padding: '14px 18px', borderRadius: 14,
-            border: `1.5px solid ${C.border}`, background: C.surface,
-            color: user.upcomingMoment ? C.inkMid : C.inkFaint,
-            fontSize: 15, fontFamily: SERIF, fontStyle: user.upcomingMoment ? 'normal' : 'italic',
-            lineHeight: 1.5,
+            width: '100%', textAlign: 'left', marginBottom: 12, padding: '16px 20px',
+            borderRadius: 16, border: `1px solid ${C.border}`,
+            background: TRACK_BG[track.id] || C.surface,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+            transition: 'transform .15s ease, box-shadow .15s ease',
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.005)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,.09)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.06)' }}
         >
-          {user.upcomingMoment
-            ? user.upcomingMoment.length > 80 ? user.upcomingMoment.slice(0, 80) + '…' : user.upcomingMoment
-            : 'Tap to describe your situation…'}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 22, marginTop: 2, flexShrink: 0 }}>{track.icon}</span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 600, color: C.blue, marginBottom: 4 }}>
+                {track.title}
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid, lineHeight: 1.4 }}>
+                {track.tagline}
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, marginLeft: 14, flexShrink: 0 }}>
+            <span style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint, whiteSpace: 'nowrap' }}>
+              {track.scenarios.length} scenarios
+            </span>
+            <span style={{ color: C.coral, fontSize: 16 }}>→</span>
+          </div>
         </button>
-      </div>
+      ))}
 
-      {/* Mode cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
-        {[
-          { icon: '🎯', label: 'Prepare',  bg: C.coralBg, color: C.coral, scenario: 'Prepare for an important situation' },
-          { icon: '💬', label: 'Express',  bg: C.blueBg,  color: C.blue,  scenario: 'Express how I feel about something' },
-          { icon: '🌿', label: 'Reflect',  bg: C.tealBg,  color: C.teal,  scenario: 'Reflect on something that happened' },
-        ].map((m) => (
-          <button
-            key={m.label}
-            onClick={() => startCoach(m.scenario)}
-            style={{
-              background: m.bg, border: 'none', borderRadius: 14, padding: '16px 10px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-              color: m.color,
-            }}
-          >
-            <span style={{ fontSize: 22 }}>{m.icon}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, fontFamily: SANS }}>{m.label.toUpperCase()}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Role card */}
-      {role && (
-        <Card bg={C.blueBg} border={C.blueDim} style={{ marginBottom: 16 }}>
-          <p style={{ fontFamily: SANS, color: C.blue, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 5 }}>
-            YOUR TRACK
-          </p>
-          <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15 }}>{role.icon} {role.label}</p>
-        </Card>
-      )}
-
-      {/* Recent sessions */}
+      {/* ── Recent Sessions ── */}
       {sessions.length > 0 && (
-        <div style={{ marginBottom: 20 }}>
-          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 12 }}>
-            RECENT SESSIONS
-          </p>
-          {sessions.slice(-3).reverse().map((s) => {
-            // Prefer track scenario title/icon; fall back to chip or raw id
+        <div style={{ marginTop: 28 }}>
+          <SectionLabel>Recent Sessions</SectionLabel>
+          {sessions.slice(-2).reverse().map((s) => {
             const trackMatch = findTrackScenario(s.scenario)
             const chip = trackMatch
               ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
               : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario || 'Session' }
             return (
               <div key={s.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0',
-                borderBottom: `1px solid ${C.border}`,
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 0', borderBottom: `1px solid ${C.border}`,
               }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>{chip.icon}</span>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{chip.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{chip.label}</p>
+                  <p style={{
+                    fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, marginBottom: 2,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{chip.label}</p>
                   {s.feedback?.coachNote && (
-                    <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 13, fontStyle: 'italic', lineHeight: 1.4,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {s.feedback.coachNote}
-                    </p>
+                    <p style={{
+                      fontFamily: SANS, color: C.inkFaint, fontSize: 12, lineHeight: 1.4,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{s.feedback.coachNote}</p>
                   )}
                 </div>
                 <button onClick={() => onResumeSession(s)} style={{
-                  background: 'none', border: 'none', color: C.coral, fontSize: 13, fontWeight: 700, fontFamily: SANS, flexShrink: 0,
+                  background: 'none', border: 'none', color: C.coral,
+                  fontSize: 13, fontWeight: 700, fontFamily: SANS, flexShrink: 0,
                 }}>View →</button>
               </div>
             )
@@ -538,24 +553,30 @@ function HomeScreen({ user, sessions, storylab, setScreen, setScenario, onResume
         </div>
       )}
 
-      {/* Storylab strip */}
-      <Card style={{ background: C.surface }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <span style={{ fontSize: 16 }}>✦</span>
-          <div>
-            <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkSoft, letterSpacing: '.07em' }}>
-              STORYLAB · DAY {storylab.currentDay || 1}
-            </p>
-            <p style={{ fontFamily: SERIF, fontSize: 15, color: C.ink }}>{currentMission.title}</p>
+      {/* ── Storylab ── */}
+      <div style={{ marginTop: 28 }}>
+        <SectionLabel>Daily Practice</SectionLabel>
+        <Card style={{ background: C.surface }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 16 }}>✦</span>
+            <div>
+              <p style={{
+                fontFamily: SANS, fontSize: 10, fontWeight: 700,
+                color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase',
+              }}>
+                STORYLAB · DAY {storylab.currentDay || 1}
+              </p>
+              <p style={{ fontFamily: SERIF, fontSize: 15, color: C.ink }}>{currentMission.title}</p>
+            </div>
           </div>
-        </div>
-        <div style={{ height: 4, background: C.border, borderRadius: 4, marginBottom: 14, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${(completedCount / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
-        </div>
-        <Btn onClick={() => setScreen('storylab')} style={{ padding: '11px 20px', fontSize: 14 }}>
-          Continue →
-        </Btn>
-      </Card>
+          <div style={{ height: 4, background: C.border, borderRadius: 4, marginBottom: 16, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(completedCount / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
+          </div>
+          <Btn onClick={() => setScreen('storylab')} style={{ padding: '14px 20px', fontSize: 15, borderRadius: 50 }}>
+            Continue →
+          </Btn>
+        </Card>
+      </div>
     </div>
   )
 }
@@ -1796,22 +1817,19 @@ export default function App() {
             sessions={sessions}
             storylab={storylab}
             setScreen={(s) => { setScreen(s); if (['coach','progress','storylab'].includes(s)) setActiveTab(s) }}
-            setScenario={(scenario) => setCurrentSession((prev) => ({ ...prev, context: scenario }))}
+            setActiveTrack={setActiveTrack}
             onResumeSession={(s) => {
               setCurrentSession(s)
               if (s.feedback) {
-                // Coached session — show its feedback
                 setScreen('feedback')
                 setActiveTab('coach')
               } else {
-                // Track simulation or storylab — navigate to the right track
                 const found = findTrackScenario(s.scenario)
                 if (found) {
                   setActiveTrack(found.track)
                   setScreen('track-scenarios')
                   setActiveTab('scenarios')
                 } else {
-                  // Storylab or other — go to coach
                   setScreen('coach')
                   setActiveTab('coach')
                 }

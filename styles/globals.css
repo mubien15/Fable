@@ -1,9 +1,9 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  background: #FFFBF5;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1A1512;
+  background: #F0F4F8;
+  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0F172A;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
