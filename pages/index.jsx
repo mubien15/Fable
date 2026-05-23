@@ -998,7 +998,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
         display: 'flex', alignItems: 'center', gap: 12,
         background: C.surface,
       }}>
-        <button onClick={() => setScreen('feedback')} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20 }}>←</button>
+        <button onClick={() => setScreen(session?.scenarioData ? 'track-scenarios' : 'feedback')} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20 }}>←</button>
         <CoachAvatar size={32} />
         <div>
           <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 14 }}>Role-play</p>
