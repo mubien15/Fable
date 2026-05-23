@@ -1,5 +1,6 @@
 import { AUDIT_SCENARIOS } from './scenarios-audit'
 import { CONSULTING_SCENARIOS } from './scenarios-consulting'
+import { LEADERSHIP_SCENARIOS } from './scenarios-leadership'
 
 export const ALL_TRACKS = [
   {
@@ -16,5 +17,11 @@ export const ALL_TRACKS = [
     icon: '💼',
     scenarios: CONSULTING_SCENARIOS,
   },
-  // More tracks will be added in Part 3
+  {
+    id: 'leadership',
+    title: 'People Leadership',
+    description: 'Have the conversations that define good management — feedback, underperformance, and building trust.',
+    icon: '🤝',
+    scenarios: LEADERSHIP_SCENARIOS,
+  },
 ]

@@ -18,12 +18,11 @@ const SANS = 'system-ui, -apple-system, sans-serif'
 // ═══════════════════════════════════════════════
 // DATA
 // ═══════════════════════════════════════════════
-const CHALLENGES = [
-  { id: 'difficult', label: 'Having difficult conversations' },
-  { id: 'feelings',  label: 'Expressing my feelings clearly' },
-  { id: 'stories',   label: 'Telling compelling stories' },
-  { id: 'connect',   label: 'Making deeper connections' },
-  { id: 'confident', label: 'Being more confident speaking' },
+const ROLES = [
+  { id: 'auditor',    label: 'Auditor / GRC / Compliance',    icon: '🔍', recommended_track: 'audit'      },
+  { id: 'consultant', label: 'Consultant / Advisory',          icon: '💼', recommended_track: 'consulting' },
+  { id: 'manager',    label: 'People Manager / Team Lead',     icon: '🤝', recommended_track: 'leadership' },
+  { id: 'all',        label: 'All of the above / Other',       icon: '⊞', recommended_track: null         },
 ]
 
 const SCENARIO_CHIPS = [
@@ -340,30 +339,32 @@ function Onboard2({ name, onNext }) {
           Good to meet you, {name}.
         </h1>
         <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
-          What's your biggest challenge right now?
+          What best describes your role? This helps us surface the most relevant practice scenarios.
         </p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-        {CHALLENGES.map((c) => (
+        {ROLES.map((r) => (
           <button
-            key={c.id}
-            onClick={() => setChoice(c.id)}
+            key={r.id}
+            onClick={() => setChoice(r.id)}
             style={{
               padding: '14px 18px', borderRadius: 14, textAlign: 'left',
-              border: `1.5px solid ${choice === c.id ? C.coral : C.border}`,
-              background: choice === c.id ? C.coralBg : C.surface,
-              color: choice === c.id ? C.coral : C.inkMid,
-              fontSize: 15, fontWeight: choice === c.id ? 600 : 400,
+              border: `1.5px solid ${choice === r.id ? C.coral : C.border}`,
+              background: choice === r.id ? C.coralBg : C.surface,
+              color: choice === r.id ? C.coral : C.inkMid,
+              fontSize: 15, fontWeight: choice === r.id ? 600 : 400,
+              display: 'flex', alignItems: 'center', gap: 12,
               transition: 'all .15s',
             }}
           >
-            {c.label}
+            <span style={{ fontSize: 20 }}>{r.icon}</span>
+            {r.label}
           </button>
         ))}
       </div>
       <Btn onClick={() => choice && onNext(choice)} disabled={!choice}>
-        This is my focus →
+        This is my role →
       </Btn>
       <PrivacyNote />
     </div>
@@ -414,7 +415,7 @@ function HomeScreen({ user, sessions, storylab, setScreen, setScenario }) {
     return 'Good evening'
   })()
 
-  const challenge = CHALLENGES.find((c) => c.id === user.challenge)
+  const role = ROLES.find((r) => r.id === user.role)
   const currentMission = MISSIONS[Math.min((storylab.currentDay || 1) - 1, 29)]
   const completedCount = (storylab.completedDays || []).length
 
@@ -478,13 +479,13 @@ function HomeScreen({ user, sessions, storylab, setScreen, setScenario }) {
         ))}
       </div>
 
-      {/* Your focus card */}
-      {challenge && (
+      {/* Role card */}
+      {role && (
         <Card bg={C.blueBg} border={C.blueDim} style={{ marginBottom: 16 }}>
           <p style={{ fontFamily: SANS, color: C.blue, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 5 }}>
-            YOUR FOCUS
+            YOUR TRACK
           </p>
-          <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15 }}>{challenge.label}</p>
+          <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15 }}>{role.icon} {role.label}</p>
         </Card>
       )}
 
@@ -599,11 +600,11 @@ function CoachScreen({ user, initialScenario, setScreen, onStartSession }) {
         Start my session →
       </Btn>
 
-      {/* Focus reminder */}
-      {user.challenge && (
+      {/* Role reminder */}
+      {user.role && user.role !== 'all' && (
         <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 12, background: C.blueBg }}>
           <p style={{ fontFamily: SERIF, color: C.blue, fontSize: 13, fontStyle: 'italic' }}>
-            Focus: {CHALLENGES.find((c) => c.id === user.challenge)?.label}
+            {ROLES.find((r) => r.id === user.role)?.icon} {ROLES.find((r) => r.id === user.role)?.label}
           </p>
         </div>
       )}
@@ -631,7 +632,7 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
             scenario: session?.context,
             userMessage: text.trim(),
             userName: user?.name,
-            userChallenge: CHALLENGES.find((c) => c.id === user?.challenge)?.label,
+            userRole: user?.role || 'all',
           }),
       })
       const data = await res.json()
@@ -931,12 +932,11 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: 'simulation',
-          // Pass full scenario object if available (gives buildScenarioPrompt rich context),
-          // otherwise fall back to the plain context string
           scenario: session?.scenarioData || session?.context,
           userMessage: text,
           sessionHistory: history.slice(0, -1),
           difficulty: session?.difficulty || 'medium',
+          userRole: session?.userRole || 'all',
         }),
       })
       const data = await res.json()
@@ -1399,7 +1399,15 @@ function StorylabScreen({ storylab, setStorylab, setScreen, onStartMission }) {
 // ═══════════════════════════════════════════════
 // SCENARIOS SCREEN (track list)
 // ═══════════════════════════════════════════════
-function ScenariosScreen({ setScreen, setActiveTrack }) {
+function ScenariosScreen({ setScreen, setActiveTrack, user }) {
+  // Surface the user's recommended track first
+  const recommendedId = ROLES.find((r) => r.id === user?.role)?.recommended_track
+  const sorted = [...ALL_TRACKS].sort((a, b) => {
+    if (a.id === recommendedId) return -1
+    if (b.id === recommendedId) return 1
+    return 0
+  })
+
   return (
     <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 6 }}>Scenarios</h1>
@@ -1408,7 +1416,7 @@ function ScenariosScreen({ setScreen, setActiveTrack }) {
       </p>
 
       {/* Track cards */}
-      {ALL_TRACKS.map((track) => (
+      {sorted.map((track) => (
         <button
           key={track.id}
           onClick={() => { setActiveTrack(track); setScreen('track-scenarios') }}
@@ -1429,9 +1437,17 @@ function ScenariosScreen({ setScreen, setActiveTrack }) {
             {track.icon}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16, marginBottom: 4 }}>
-              {track.title}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16 }}>
+                {track.title}
+              </p>
+              {track.id === recommendedId && (
+                <span style={{
+                  fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
+                  color: C.teal, background: C.tealBg, padding: '2px 8px', borderRadius: 20,
+                }}>FOR YOU</span>
+              )}
+            </div>
             <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
               {track.description}
             </p>
@@ -1621,8 +1637,8 @@ export default function App() {
   const [storylab,  setStorylab]  = useState({ currentDay: 1, completedDays: [] })
 
   // Onboarding state
-  const [obName,    setObName]    = useState('')
-  const [obChallenge, setObChallenge] = useState('')
+  const [obName, setObName] = useState('')
+  const [obRole, setObRole] = useState('')
 
   // Session state
   const [currentSession, setCurrentSession] = useState(null)
@@ -1656,7 +1672,7 @@ export default function App() {
 
   // Onboarding flow
   const finishOnboarding = (upcomingMoment) => {
-    const u = { name: obName, challenge: obChallenge, upcomingMoment, onboarded: true }
+    const u = { name: obName, role: obRole, upcomingMoment, onboarded: true }
     lsSet(LS.user, u)
     setUser(u)
     setScreen('home')
@@ -1681,14 +1697,15 @@ export default function App() {
       userMessage: '',
       feedback: null,
       difficulty: difficulty || scenarioData.difficulty_default || 'medium',
-      scenarioData,   // full object — used by SimulationScreen for opening_line and buildScenarioPrompt
+      scenarioData,
+      userRole: user?.role || 'all',
     })
     setScreen('simulation')
   }
 
   // Start a Storylab mission
   const startMission = (mission) => {
-    setCurrentSession({ scenario: 'storylab', context: mission.prompt, userMessage: '', feedback: null, difficulty: 'medium' })
+    setCurrentSession({ scenario: 'storylab', context: mission.prompt, userMessage: '', feedback: null, difficulty: 'medium', userRole: user?.role || 'all' })
     setActiveTab('coach')
     setScreen('practice')
   }
@@ -1709,7 +1726,7 @@ export default function App() {
         return <Onboard1 onNext={(name) => { setObName(name); setScreen('onboard2') }} />
 
       case 'onboard2':
-        return <Onboard2 name={obName} onNext={(c) => { setObChallenge(c); setScreen('onboard3') }} />
+        return <Onboard2 name={obName} onNext={(r) => { setObRole(r); setScreen('onboard3') }} />
 
       case 'onboard3':
         return (
@@ -1793,6 +1810,7 @@ export default function App() {
           <ScenariosScreen
             setScreen={setScreen}
             setActiveTrack={setActiveTrack}
+            user={user}
           />
         )
 

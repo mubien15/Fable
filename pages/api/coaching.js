@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { COACHING_FEEDBACK_SYSTEM, buildScenarioPrompt, PATTERN_SYSTEM } from '../../lib/coachPrompt'
+import { buildCoachingFeedbackSystem, buildScenarioPrompt, PATTERN_SYSTEM } from '../../lib/coachPrompt'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -26,11 +26,11 @@ export default async function handler(req, res) {
   const {
     scenario,
     userMessage,
-    sessionHistory,   // full conversation history array [{role, content}, ...]
+    sessionHistory,   // full conversation history [{role, content}, ...]
     mode,
     insights,
     userName,
-    userChallenge,
+    userRole = 'all', // auditor | consultant | manager | all
     difficulty = 'medium',
   } = req.body
 
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     // ── Simulation: role-play as the counterpart ──────────────────────────
     if (mode === 'simulation') {
       // `scenario` may be a full structured object (from scenario tracks)
-      // or a plain context string (from custom coach sessions) — buildScenarioPrompt handles both
+      // or a plain context string (from custom coach sessions)
       const history = (sessionHistory || []).map((m) => ({
         role: m.role === 'user' ? 'user' : 'assistant',
         content: m.content,
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
         max_tokens: 600,
-        system: buildScenarioPrompt(scenario, difficulty),
+        system: buildScenarioPrompt(scenario, difficulty, userRole),
         messages: history,
       })
 
@@ -75,8 +75,7 @@ export default async function handler(req, res) {
 
     // ── Default: coaching feedback (returns JSON for FeedbackScreen) ──────
     const contextLines = [
-      userName        ? `User's name: ${userName}` : '',
-      userChallenge   ? `Their communication focus: ${userChallenge}` : '',
+      userName ? `User's name: ${userName}` : '',
       `Scenario: ${scenario}`,
       `\nWhat they want to say:\n${userMessage}`,
     ].filter(Boolean).join('\n')
@@ -84,7 +83,7 @@ export default async function handler(req, res) {
     const response = await client.messages.create({
       model: 'claude-sonnet-4-5',
       max_tokens: 900,
-      system: COACHING_FEEDBACK_SYSTEM,
+      system: buildCoachingFeedbackSystem(userRole),
       messages: [{ role: 'user', content: contextLines }],
     })
 
