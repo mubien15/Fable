@@ -852,8 +852,11 @@ function FeedbackScreen({ session, setScreen, setSessions, sessions, storylab, s
 // ═══════════════════════════════════════════════
 // SIMULATION SCREEN
 // ═══════════════════════════════════════════════
-function SimulationScreen({ session, setScreen, setSessions, sessions }) {
+function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMessages }) {
   const [messages, setMessages] = useState(() => {
+    // Restore saved messages if the user is resuming
+    if (session?.messages?.length > 0) return session.messages
+
     const msgs = [
       { role: 'coach', content: session?.scenarioData
           ? `Ready. I'll play ${session.scenarioData.counterpartRole.split('—')[0].trim()}. Respond when you're ready.`
@@ -867,8 +870,14 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
   })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [turn, setTurn] = useState(0)
-  const [done, setDone] = useState(false)
+  // Restore turn count from saved messages (count user turns)
+  const [turn, setTurn] = useState(() =>
+    session?.messages?.filter((m) => m.role === 'user').length || 0
+  )
+  // Restore done state: a coach message after position 0 means the session ended
+  const [done, setDone] = useState(() =>
+    session?.messages?.slice(1).some((m) => m.role === 'coach') || false
+  )
   const [listening, setListening] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -998,7 +1007,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions }) {
         display: 'flex', alignItems: 'center', gap: 12,
         background: C.surface,
       }}>
-        <button onClick={() => setScreen(session?.scenarioData ? 'track-scenarios' : 'feedback')} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20 }}>←</button>
+        <button
+          onClick={() => {
+            onSaveMessages?.(messages)
+            setScreen(session?.scenarioData ? 'track-scenarios' : 'feedback')
+          }}
+          style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20 }}
+        >←</button>
         <CoachAvatar size={32} />
         <div>
           <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 14 }}>Role-play</p>
@@ -1506,7 +1521,7 @@ const DIFFICULTY_META = {
   hard:   { label: 'Hard',   color: C => C.coral,  bg: C => C.coralBg,  desc: 'Defensive, will push back hard'        },
 }
 
-function TrackScenariosScreen({ track, setScreen, onStartScenario }) {
+function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSession }) {
   const [selected, setSelected] = useState(null)
   const [difficulty, setDifficulty] = useState('medium')
 
@@ -1529,6 +1544,9 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario }) {
         {track.scenarios.map((scenario) => {
           const isSelected = selected?.id === scenario.id
           const diffDefault = DIFFICULTY_META[scenario.difficulty_default] || DIFFICULTY_META.medium
+          // Check if there's a saved (resumable) conversation for this scenario
+          const isResumable = currentSession?.scenario === scenario.id &&
+            (currentSession?.messages?.length || 0) > 1
 
           return (
             <div
@@ -1559,6 +1577,12 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario }) {
                     }}>
                       {diffDefault.label.toUpperCase()}
                     </span>
+                    {isResumable && (
+                      <span style={{
+                        fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
+                        color: C.blue, background: C.blueBg, padding: '2px 8px', borderRadius: 20,
+                      }}>IN PROGRESS</span>
+                    )}
                   </div>
                   <p style={{
                     fontFamily: SERIF, color: C.inkSoft, fontSize: 13, lineHeight: 1.55,
@@ -1613,9 +1637,21 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario }) {
                     ))}
                   </div>
 
-                  <Btn onClick={() => onStartScenario(scenario, difficulty)}>
-                    Start scenario →
-                  </Btn>
+                  {/* Resume or Start — depends on whether there's a saved conversation */}
+                  {isResumable ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <Btn onClick={() => setScreen('simulation')}>
+                        Resume conversation →
+                      </Btn>
+                      <Btn variant="secondary" onClick={() => onStartScenario(scenario, difficulty)}>
+                        Start fresh
+                      </Btn>
+                    </div>
+                  ) : (
+                    <Btn onClick={() => onStartScenario(scenario, difficulty)}>
+                      Start scenario →
+                    </Btn>
+                  )}
                 </div>
               )}
             </div>
@@ -1786,6 +1822,7 @@ export default function App() {
             setScreen={setScreen}
             sessions={sessions}
             setSessions={setSessions}
+            onSaveMessages={(msgs) => setCurrentSession((prev) => prev ? { ...prev, messages: msgs } : prev)}
           />
         )
 
@@ -1820,6 +1857,7 @@ export default function App() {
             track={activeTrack}
             setScreen={setScreen}
             onStartScenario={startScenario}
+            currentSession={currentSession}
           />
         )
 
