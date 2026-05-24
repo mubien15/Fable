@@ -34,10 +34,10 @@ const SANS = "'DM Sans', system-ui, -apple-system, sans-serif"
 // DATA
 // ═══════════════════════════════════════════════
 const ROLES = [
-  { id: 'auditor',    label: 'Auditor / GRC / Compliance',    icon: '🔍', recommended_track: 'audit'      },
-  { id: 'consultant', label: 'Consultant / Advisory',          icon: '💼', recommended_track: 'consulting' },
-  { id: 'manager',    label: 'People Manager / Team Lead',     icon: '🤝', recommended_track: 'leadership' },
-  { id: 'all',        label: 'All of the above / Other',       icon: '⊞', recommended_track: null         },
+  { id: 'auditor',    label: 'Auditor / GRC / Compliance',    icon: '🔍', recommended_track: 'audit',      description: 'Practise delivering findings, managing examiners, and holding your position.' },
+  { id: 'consultant', label: 'Consultant / Advisory',          icon: '💼', recommended_track: 'consulting', description: 'Practise client conversations, pitches, and the moments that make or break an engagement.' },
+  { id: 'manager',    label: 'People Manager / Team Lead',     icon: '🤝', recommended_track: 'leadership', description: 'Practise feedback, underperformance, and the conversations most managers avoid until it\'s too late.' },
+  { id: 'all',        label: 'All of the above / Other',       icon: '⊞', recommended_track: null,         description: 'You wear a lot of hats. We\'ve got scenarios for all of them.' },
 ]
 
 const SCENARIO_CHIPS = [
@@ -346,13 +346,13 @@ function Onboard1({ onNext }) {
   return (
     <div className="fade-up" style={{ padding: '60px 28px 40px' }}>
       <OnboardDots step={1} />
-      <div style={{ marginBottom: 36, textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 14 }}>✦</div>
-        <h1 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 600, color: C.ink, margin: '0 0 10px' }}>
-          Welcome to Fable
+      <div style={{ marginBottom: 36 }}>
+        <div style={{ fontSize: 36, marginBottom: 20, textAlign: 'center' }}>✦</div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 600, color: C.ink, margin: '0 0 12px', lineHeight: 1.25 }}>
+          The conversations that matter most deserve more than improvisation.
         </h1>
         <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
-          Your personal coach for real-life conversations. Let's get to know you.
+          Fable helps professionals in regulated industries practise the high-stakes conversations that define careers — before they have to have them for real.
         </p>
       </div>
 
@@ -376,7 +376,7 @@ function Onboard1({ onNext }) {
         autoFocus
       />
       <Btn onClick={() => name.trim() && onNext(name.trim())} disabled={!name.trim()}>
-        Continue →
+        Start practising →
       </Btn>
       <PrivacyNote />
     </div>
@@ -393,7 +393,7 @@ function Onboard2({ name, onNext }) {
           Good to meet you, {name}.
         </h1>
         <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
-          What best describes your role? This helps us surface the most relevant practice scenarios.
+          Who do you show up as at work? We'll personalise your practice to the conversations that matter most in your world.
         </p>
       </div>
 
@@ -406,14 +406,18 @@ function Onboard2({ name, onNext }) {
               padding: '14px 18px', borderRadius: 14, textAlign: 'left',
               border: `1.5px solid ${choice === r.id ? C.coral : C.border}`,
               background: choice === r.id ? C.coralBg : C.surface,
-              color: choice === r.id ? C.coral : C.inkMid,
-              fontSize: 15, fontWeight: choice === r.id ? 600 : 400,
-              display: 'flex', alignItems: 'center', gap: 12,
-              transition: 'all .15s',
+              transition: 'all .15s', display: 'flex', alignItems: 'flex-start', gap: 12,
             }}
           >
-            <span style={{ fontSize: 20 }}>{r.icon}</span>
-            {r.label}
+            <span style={{ fontSize: 20, marginTop: 2, flexShrink: 0 }}>{r.icon}</span>
+            <div style={{ textAlign: 'left' }}>
+              <p style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: choice === r.id ? C.coral : C.ink, marginBottom: 3 }}>
+                {r.label}
+              </p>
+              <p style={{ fontFamily: SERIF, fontSize: 13, color: choice === r.id ? C.coral : C.inkSoft, lineHeight: 1.45, fontStyle: 'italic' }}>
+                {r.description}
+              </p>
+            </div>
           </button>
         ))}
       </div>
@@ -431,12 +435,16 @@ function Onboard3({ onNext, onSkip }) {
     <div className="fade-up" style={{ padding: '60px 28px 40px' }}>
       <OnboardDots step={3} />
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 8 }}>
-          One last thing.
+        <div style={{ background: C.ink, borderRadius: 16, padding: '20px 22px', marginBottom: 24 }}>
+          <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 16, lineHeight: 1.7, fontStyle: 'italic' }}>
+            "30 days. 30 real conversations. Identify the habits holding you back."
+          </p>
+        </div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 600, color: C.ink, marginBottom: 8, lineHeight: 1.3 }}>
+          Is there a conversation coming up you want to prepare for?
         </h1>
         <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
-          Is there a specific moment coming up you want to prepare for?
-          A hard conversation, an interview, something important?
+          A difficult conversation, an interview, something important — describe it and we'll start there.
         </p>
       </div>
 
@@ -451,7 +459,7 @@ function Onboard3({ onNext, onSkip }) {
         <Btn onClick={() => onNext(moment.trim())} disabled={!moment.trim()}>
           Let's prepare for this →
         </Btn>
-        <Btn variant="ghost" onClick={onSkip}>Skip for now</Btn>
+        <Btn variant="ghost" onClick={onSkip}>I'll explore on my own →</Btn>
       </div>
       <PrivacyNote />
     </div>
@@ -585,6 +593,13 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
       {/* ── Daily Rep ── */}
       <div style={{ marginTop: 28 }}>
         <SectionLabel>Daily Practice</SectionLabel>
+        {completedCount === 0 && (
+          <div style={{ background: C.ink, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
+            <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
+              "30 days. 30 real conversations. Identify the habits holding you back."
+            </p>
+          </div>
+        )}
         <Card style={{ background: C.surface }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
             <div style={{
@@ -595,7 +610,7 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
                 <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase' }}>
-                  DAILY REP · DAY {dailyRep.currentDay || 1}
+                  DAILY REP · DAY {dailyRep.currentDay || 1} · {currentDayData?.phase_label?.toUpperCase()}
                 </p>
                 {streak > 0 && (
                   <span style={{ fontFamily: SANS, fontSize: 10, color: C.coral, background: C.coralBg, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
@@ -603,11 +618,14 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
                   </span>
                 )}
               </div>
-              <p style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.ink, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.ink, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentDayData?.title}
               </p>
-              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkMid }}>
-                {currentDayData?.phase_label} · {currentDayData?.duration}
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkMid, marginBottom: 2 }}>
+                Today: {currentDayData?.focus}
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint }}>
+                {currentDayData?.duration}
               </p>
             </div>
           </div>
@@ -615,7 +633,7 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
             <div style={{ height: '100%', width: `${(completedCount / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
           </div>
           <Btn onClick={() => onStartDay(currentDayData)} style={{ borderRadius: 50 }}>
-            Begin today's rep →
+            Start today's rep →
           </Btn>
         </Card>
       </div>
@@ -665,22 +683,24 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
 
   return (
     <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
-      <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Coach</h1>
-      <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, marginBottom: 28, lineHeight: 1.5 }}>
-        Your personal thinking partner
+      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 6, lineHeight: 1.3 }}>
+        Not every hard conversation fits a scenario.
+      </h1>
+      <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, marginBottom: 28, lineHeight: 1.55 }}>
+        Use the coach for anything on your mind — work, people, decisions, or just thinking out loud.
       </p>
 
       <ModeCard
         icon="🎯"
-        title="I have a specific situation"
-        desc="A conversation coming up, a decision you're stuck on, or something you need to prepare for."
+        title="I have a situation to work through"
+        desc="A conversation coming up, a decision you're stuck on, or something you need to prepare for. Walk through it with your coach."
         btnLabel="Let's work on it →"
         mode="specific"
       />
       <ModeCard
         icon="💭"
-        title="I need to think out loud"
-        desc="Something is on your mind but you're not sure what you need yet. Just start talking."
+        title="I just need to think"
+        desc="No agenda. Something is sitting with you and you're not sure what you need yet. Just start."
         btnLabel="Start talking →"
         mode="thinking"
       />
@@ -1384,8 +1404,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
     const msgs = [
       { role: 'coach', content: session?.scenarioData
-          ? `Ready. I'll play ${session.scenarioData.counterpartRole.split('—')[0].trim()}. Respond when you're ready.`
-          : "Now let's make it real. I'll play the other person. Respond naturally." },
+          ? `In character as ${session.scenarioData.counterpartRole.split('—')[0].trim()}. Go whenever you're ready.`
+          : "In character. Respond naturally — I'll follow your lead." },
     ]
     // Pre-load the scenario's opening line so the user responds to it immediately
     if (session?.scenarioData?.opening_line) {
@@ -1643,10 +1663,11 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           </div>
         ))}
         {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: C.border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: C.border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Dots />
             </div>
+            <p style={{ fontFamily: SERIF, color: C.inkFaint, fontSize: 13, fontStyle: 'italic' }}>Getting into character…</p>
           </div>
         )}
         <div ref={bottomRef} />
@@ -1832,7 +1853,10 @@ function ProgressScreen({ sessions, setScreen }) {
 
   return (
     <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
-      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 24 }}>Your progress</h1>
+      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 4 }}>Your progress</h1>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, marginBottom: 24, lineHeight: 1.55 }}>
+        Every session, every rep, every reflection — tracked here.
+      </p>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
@@ -1876,13 +1900,17 @@ function ProgressScreen({ sessions, setScreen }) {
       {/* Session history */}
       <div style={{ marginBottom: 24 }}>
         <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 14 }}>
-          WHAT YOUR COACH REMEMBERS
+          ALL SESSIONS
         </p>
         {sessions.length === 0 ? (
-          <Card style={{ textAlign: 'center', padding: '28px 20px' }}>
-            <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 15, fontStyle: 'italic' }}>
-              No sessions yet. Your coach is ready when you are.
+          <Card style={{ padding: '28px 20px' }}>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 17, fontWeight: 600, marginBottom: 8, lineHeight: 1.35 }}>
+              Your practice history starts here.
             </p>
+            <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.65, marginBottom: 20 }}>
+              Complete your first scenario and it will appear here — along with your feedback, scores, and reflections over time.
+            </p>
+            <Btn onClick={() => setScreen('scenarios')}>Go to Scenarios →</Btn>
           </Card>
         ) : (
           sessions.slice().reverse().map((s) => {
@@ -1910,7 +1938,7 @@ function ProgressScreen({ sessions, setScreen }) {
         )}
       </div>
 
-      <Btn onClick={() => setScreen('coach')}>Start a new session →</Btn>
+      {sessions.length > 0 && <Btn onClick={() => setScreen('scenarios')}>Find your next scenario →</Btn>}
     </div>
   )
 }
@@ -2125,7 +2153,7 @@ function DailyRepDebriefScreen({ day, setScreen, onComplete }) {
         </>
       ) : (
         <Btn onClick={save} disabled={!reflection.trim()}>
-          Save & complete →
+          Save reflection →
         </Btn>
       )}
     </div>
@@ -2157,7 +2185,7 @@ function DailyRepScreen({ dailyRep, setScreen, onStartDay }) {
         </p>
         <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 4 }}>Daily Rep</h1>
         <p style={{ color: C.inkSoft, fontSize: 14, lineHeight: 1.6 }}>
-          30 days of professional conversation practice.
+          30 days. 30 real conversations. Identify the habits holding you back.
         </p>
       </div>
 
@@ -2399,7 +2427,7 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
     <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 6 }}>Scenarios</h1>
       <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
-        Structured practice for real professional situations.
+        Pick a track and start your rep. Every scenario is a real conversation — not a drill.
       </p>
 
       {/* Track cards */}
@@ -2569,7 +2597,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                     display: '-webkit-box', WebkitLineClamp: isSelected ? 100 : 2,
                     WebkitBoxOrient: 'vertical', overflow: 'hidden',
                   }}>
-                    {scenario.context_short || scenario.context}
+                    {scenario.card_blurb || scenario.context_short || scenario.context}
                   </p>
                 </div>
                 <span style={{ color: C.inkFaint, fontSize: 16, flexShrink: 0, marginTop: 2, transform: isSelected ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>›</span>
@@ -2878,8 +2906,11 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
           {/* Actions */}
           {saved ? (
             <>
-              <div style={{ textAlign: 'center', padding: '14px', borderRadius: 14, background: C.tealBg, marginBottom: 16 }}>
-                <p style={{ fontFamily: SANS, color: C.teal, fontWeight: 700, fontSize: 15 }}>✓ Marked complete</p>
+              <div style={{ borderRadius: 14, background: C.tealBg, padding: '16px 18px', marginBottom: 16 }}>
+                <p style={{ fontFamily: SANS, color: C.teal, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>✓ Rep saved.</p>
+                <p style={{ fontFamily: SERIF, color: C.teal, fontSize: 13, fontStyle: 'italic', lineHeight: 1.5 }}>
+                  One more conversation you won't be walking into unprepared.
+                </p>
               </div>
               {nextDiff !== currentDiff && (
                 <Btn
@@ -2887,7 +2918,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
                   onClick={() => onTryAgain(scenario, nextDiff)}
                   style={{ marginBottom: 10 }}
                 >
-                  Try Again — {nextDiffMeta?.label} →
+                  Go harder →
                 </Btn>
               )}
               <Btn variant="ghost" onClick={onBack}>Back to track</Btn>
@@ -2899,7 +2930,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
               </Btn>
               {nextDiff !== currentDiff && (
                 <Btn variant="secondary" onClick={() => onTryAgain(scenario, nextDiff)}>
-                  Try Again — {nextDiffMeta?.label} →
+                  Go harder →
                 </Btn>
               )}
               <Btn variant="ghost" onClick={onBack}>Back to track</Btn>

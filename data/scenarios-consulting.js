@@ -9,6 +9,7 @@ export const CONSULTING_SCENARIOS = [
     counterpartRole: 'Client — Head of Risk at a mid-sized bank. They were expecting the deliverable yesterday. They are not furious yet, but they are losing patience.',
     context: `Your team was supposed to deliver the draft risk framework document yesterday. A key team member was sick, and the work is now 48 hours behind. The client has sent a follow-up email asking for a status update. You are calling them before they escalate to your partner.`,
     challenge: 'You need to be honest about the delay without over-explaining or making excuses, maintain the client\'s confidence in your team, and agree a new timeline that you can actually deliver on. The worst outcomes are: blaming your team member, making a promise you can\'t keep, or being so apologetic you seem incompetent.',
+    card_blurb: 'Own the delay, recover the confidence, get a committed new timeline.',
     context_short: 'Your team missed a deliverable by 48 hours. The client knows. You\'re calling before they escalate.',
     good_outcome: 'The client feels heard, you\'ve owned the delay cleanly, and you leave with a specific new deadline they believe in.',
     watch_out_for: [
@@ -43,6 +44,7 @@ Play the client as follows:
     counterpartRole: 'Client — CFO who is unhappy with the quality of the Phase 1 report your team delivered. She has specific complaints.',
     context: `Your team delivered a Phase 1 current-state assessment for a regulatory compliance transformation programme. The CFO has called you in for a meeting. She feels the report is too generic, doesn't reflect the specific context of their business, and reads like a template rather than bespoke analysis. She is right — at least partially. The team did rush the last section.`,
     challenge: 'You need to hear her out fully, acknowledge what is legitimate without throwing your team under the bus, and agree on a remediation path — ideally without triggering a formal complaint or fee dispute. The trap is being defensive, which will escalate things.',
+    card_blurb: 'Turn a client complaint into a repaired relationship — without grovelling.',
     context_short: 'The CFO thinks your Phase 1 report is generic and templated. She\'s right — at least partially. The Phase 2 extension is at risk.',
     good_outcome: 'The CFO feels heard, you\'ve owned what\'s yours without throwing the team under the bus, and you leave with a specific remediation plan she believes in.',
     watch_out_for: [
@@ -78,6 +80,7 @@ Play the CFO as follows:
     counterpartRole: 'Client project lead — friendly, well-intentioned, but keeps adding requests as if they are small favours.',
     context: `You are three weeks into a 10-week engagement. The original scope was a gap assessment against OSFI B-20 guidelines. The client has now asked your team to also: review their model risk governance framework, produce a board-ready summary deck, and attend two additional steering committee meetings. None of this was in the original Statement of Work. Individually each request sounds small. Together they represent roughly 3 additional weeks of work.`,
     challenge: 'The client is friendly and doesn\'t think they\'re doing anything wrong — they genuinely see these as small add-ons. You need to name the pattern professionally, protect your team\'s capacity, and either get a scope change agreed or get clear agreement to deprioritise something else.',
+    card_blurb: 'Name the pattern, quantify the impact, protect the engagement.',
     context_short: 'Three weeks in, the client has added what amounts to three extra weeks of work — one "small" request at a time.',
     good_outcome: 'The client understands what\'s in and out of scope, and you\'ve agreed either a change order or a clear trade-off on priorities.',
     watch_out_for: [
@@ -112,6 +115,7 @@ Play the client lead as follows:
     counterpartRole: 'Client procurement or finance contact — not the business sponsor, the person who processes invoices. They are not hostile, just bureaucratic.',
     context: `An invoice for €85,000 is now 45 days overdue. Your payment terms are 30 days. You have sent two email reminders. The engagement is ongoing and you do not want to damage the relationship with the business sponsor. But your firm's finance team is pushing for escalation. You are calling the procurement contact to resolve this.`,
     challenge: 'This conversation feels awkward because money is involved and you don\'t want to seem aggressive. But being too soft means the invoice won\'t be paid. You need to be clear, professional, and get a committed payment date — not a vague \'we\'ll look into it.\'',
+    card_blurb: 'Have the money conversation directly — and get a date, not a vague promise.',
     context_short: 'An €85,000 invoice is 45 days overdue. There\'s a vague "query" on it. You need a specific payment commitment before you leave this call.',
     good_outcome: 'You\'ve understood the actual reason for the delay, resolved it, and left with a committed payment date — not "we\'ll look into it."',
     watch_out_for: [
@@ -147,6 +151,7 @@ Play the procurement contact as follows:
     counterpartRole: 'A panel of three: the CFO (sceptical of consulting value), the CRO (technically sharp, will test your knowledge), and the Head of Procurement (focused on price and delivery).',
     context: `You are presenting in the final round of an RFP. Your firm is competing against two others to win a 6-month regulatory transformation programme for a mid-sized Canadian bank. The scope involves OSFI guideline alignment and an internal audit transformation. Your proposal is strong but your price is 15% higher than the cheapest competitor. You have 20 minutes to present and 15 minutes of Q&A.`,
     challenge: 'You need to articulate your differentiated value clearly enough that the 15% premium feels justified. The panel will push on price, timelines, and why your firm is better than competitors. You cannot name competitors directly. You need to be confident, specific, and commercially astute.',
+    card_blurb: 'Justify your premium in a room of sceptics — on value, not discount.',
     context_short: 'Final round RFP pitch. Your fee is 15% higher than the cheapest competitor. 20 minutes, a sharp three-person panel, and a price question you can\'t duck.',
     good_outcome: 'The panel feels you understood their specific problem. You differentiated on insight and experience — and held the price under pressure.',
     watch_out_for: [

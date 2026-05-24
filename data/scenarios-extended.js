@@ -15,6 +15,7 @@ export const EXTENDED_SCENARIOS = [
     counterpartRole: 'Regulatory examiner — from OSFI, FCA, or equivalent. Professional, methodical, and looking for gaps. Not hostile, but does not accept vague answers.',
     context: `A regulatory examiner is conducting a supervisory review of your firm's AML and transaction monitoring framework. You have been asked to sit for a 45-minute interview. The examiner has already reviewed your documentation and has specific questions about three areas where your written policies and actual practice appear to diverge. This is not a casual conversation — your answers will be quoted in the examination report.`,
     challenge: 'The examiner will test whether you actually understand your own framework or are just reading from policies. Vague answers will be followed up with harder questions. You need to be precise, honest about gaps without volunteering information that creates additional findings, and composed under scrutiny.',
+    card_blurb: 'Sit across from a regulator and answer precisely — no more, no less.',
     context_short: 'A regulatory examiner is interviewing you live about your AML framework — asking what actually happens, not what the policy says.',
     good_outcome: 'You answer precisely, acknowledge gaps honestly without volunteering new findings, and say "I\'ll confirm and come back to you" when you genuinely don\'t know.',
     watch_out_for: [
@@ -51,6 +52,7 @@ Play the regulatory examiner as follows:
     counterpartRole: 'Chief Compliance Officer or Head of Internal Audit — senior, experienced, and needs to assess both the substance of the concern and the credibility of the person raising it.',
     context: `During your work on a client engagement, you have observed what appears to be a deliberate misclassification of a high-risk transaction to avoid triggering a regulatory report. You are not certain — there may be an explanation you are not aware of. But the pattern is consistent enough across three transactions that you cannot ignore it. You have requested this meeting with the CCO to raise the concern formally. This could implicate a senior colleague.`,
     challenge: 'This is one of the hardest professional conversations that exists. You need to present what you observed with precision — not accusation — while making clear the seriousness of the concern. You must be factual without overstating, and composed without appearing indifferent. The stakes are real: a wrongful accusation damages a career; a suppressed concern enables a serious breach.',
+    card_blurb: 'Raise a serious internal concern with composure — and get it taken seriously.',
     context_short: 'You\'ve observed a pattern that looks like deliberate misclassification of high-risk transactions. You\'re raising it with the CCO — before you know if it\'s misconduct.',
     good_outcome: 'The CCO agrees to investigate. You presented observations — not conclusions — with precision, composure, and appropriate uncertainty.',
     watch_out_for: [
@@ -89,6 +91,7 @@ Play the CCO as follows:
     counterpartRole: 'Senior client stakeholder from a high-context communication culture (Japan, South Korea, Gulf region, or similar) — indirect, relationship-focused, and will not disagree openly even when they disagree strongly.',
     context: `You are three weeks into an engagement with a client whose senior stakeholders come from a high-context communication culture. Direct disagreement is rarely expressed openly — instead concerns appear as silence, topic changes, or over-politeness. In your last steering committee meeting, the client said everything was "proceeding well" but since then has cancelled two working sessions and stopped responding to deliverable review requests. Something is wrong and you need to find out what — without putting them in a position where they feel forced to voice criticism directly.`,
     challenge: 'You cannot ask "is something wrong?" directly — that will produce a polite denial. You need to create space for concerns to surface indirectly, read what is not being said, and rebuild trust without ever making the discomfort explicit. This requires a fundamentally different communication style than the direct approach used in other scenarios.',
+    card_blurb: 'Read what isn\'t being said — and rebuild trust across a cultural gap.',
     context_short: 'The engagement has gone quiet. Two cancelled sessions, no responses to review requests. Something is wrong — but your client will not say so directly.',
     good_outcome: 'The client surfaces their concern about the deliverable — indirectly. You got there by creating space, not demanding directness.',
     watch_out_for: [
@@ -125,6 +128,7 @@ Play the senior client stakeholder as follows:
     counterpartRole: 'Partner — your direct superior on this engagement. Senior, experienced, well-regarded internally. They have made a call you believe is wrong and that could damage the client relationship or the quality of the output.',
     context: `The partner leading your engagement has decided to present a set of recommendations to the client that you believe are not adequately supported by the evidence gathered during fieldwork. You have reviewed the data twice. You are confident the recommendations overstate the conclusions the data supports. If presented as-is, a sophisticated client will spot the gap — and it will reflect badly on the whole team. You have 15 minutes before the partner joins a pre-meeting prep call. You need to raise this now.`,
     challenge: 'This is a high-stakes internal conversation. The partner has more experience and authority than you. They may have context you don\'t. But staying silent when you believe the work is wrong is not an option. You need to raise the concern with enough precision and confidence that it is taken seriously, without being perceived as undermining the partner or overstepping.',
+    card_blurb: 'Challenge a partner who\'s wrong — specifically enough to be heard.',
     context_short: 'Your partner is about to present recommendations that aren\'t supported by the fieldwork data. You have 15 minutes before the call.',
     good_outcome: 'The partner agrees to review and soften the specific slide. You raised the concern precisely, stayed open to their context, and held firm when they pushed back without new evidence.',
     watch_out_for: [
@@ -164,6 +168,7 @@ Play the partner as follows:
     counterpartRole: 'Direct report — has been with the firm for 4 years, good performer, did not see this coming. The role is being eliminated due to restructuring, not performance.',
     context: `Your firm has gone through a restructuring and one role on your team has been eliminated. The person whose role is affected is a solid performer who has done nothing wrong. You have been given the script from HR and have 30 minutes scheduled for this conversation. You are the first person to tell them. After this meeting, HR will follow up with the formal process and next steps. Your job is to deliver the news clearly, humanely, and without making promises you cannot keep.`,
     challenge: 'This is the hardest people management conversation that exists. The person will likely be shocked. They may cry, become angry, or go silent. You need to deliver the message clearly in the first two minutes — not buried after ten minutes of preamble — and then hold space for their reaction without filling the silence with false reassurance. You cannot promise things HR has not confirmed.',
+    card_blurb: 'Deliver the worst news with clarity and dignity. Let the silence do its work.',
     context_short: 'A solid 4-year employee\'s role has been eliminated. They don\'t know. You\'re the first person to tell them.',
     good_outcome: 'They leave with clarity about what happens next and feeling treated with dignity. Not good — but respected. That\'s what success looks like here.',
     watch_out_for: [
@@ -203,6 +208,7 @@ Play the direct report as follows:
     counterpartRole: 'Your direct manager or HR business partner — they like you, want to retain you, but are working within budget constraints and internal salary bands.',
     context: `You have been in your current role for 18 months. You have delivered strong results — a major client engagement came in under budget and received excellent feedback, you have taken on additional responsibilities beyond your job description, and you know from a recruiter conversation that your market rate is 15–20% above your current salary. You have requested this meeting to discuss compensation. You are not threatening to leave — but you are serious about this conversation.`,
     challenge: 'Most professionals are uncomfortable negotiating for themselves — they either undersell (too apologetic, accept the first offer) or overcook it (ultimatums, aggressive anchoring). The skill is making a clear, evidence-based case with calm confidence, knowing your number, and handling the "budget constraints" objection without backing down completely or escalating unnecessarily.',
+    card_blurb: 'Ask for what you\'re worth — with evidence, not apology.',
     context_short: 'You\'re 15–20% below market after 18 months of strong results and expanded scope. Time to ask — with a specific number, not a range.',
     good_outcome: 'You leave with either an agreed number or a specific commitment with a date. Not "we\'ll see what we can do" — an actual commitment.',
     watch_out_for: [
