@@ -98,10 +98,11 @@ function getDailyRepScenario(day) {
 // STORAGE HELPERS
 // ═══════════════════════════════════════════════
 const LS = {
-  user:     'fable_user',
-  sessions: 'fable_sessions',
-  storylab: 'fable_storylab',  // kept for migration awareness
-  dailyRep: 'fable_daily_rep',
+  user:      'fable_user',
+  sessions:  'fable_sessions',
+  storylab:  'fable_storylab',  // kept for migration awareness
+  dailyRep:  'fable_daily_rep',
+  completed: 'completedScenarios',
 }
 
 function lsGet(key, fallback) {
@@ -1376,7 +1377,7 @@ function FeedbackScreen({ session, setScreen, setSessions, sessions, storylab, s
 // ═══════════════════════════════════════════════
 // SIMULATION SCREEN
 // ═══════════════════════════════════════════════
-function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMessages }) {
+function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMessages, onEnd }) {
   const [messages, setMessages] = useState(() => {
     // Restore saved messages if the user is resuming
     if (session?.messages?.length > 0) return session.messages
@@ -1394,6 +1395,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hintLoading, setHintLoading] = useState(false)
   // Restore turn count from saved messages (count user turns)
   const [turn, setTurn] = useState(() =>
     session?.messages?.filter((m) => m.role === 'user').length || 0
@@ -1500,12 +1502,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     }
   }
 
-  const finish = () => {
+  const handleEnd = (msgs = messages) => {
     const newSession = {
       id: Date.now(),
       date: new Date().toLocaleDateString(),
       scenario: session?.scenario,
       context: session?.context,
+      messages: msgs,
       userMessage: session?.userMessage,
       feedback: session?.feedback,
       isDailyRep: session?.isDailyRep || false,
@@ -1515,43 +1518,95 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     const updated = [...sessions, newSession]
     setSessions(updated)
     lsSet(LS.sessions, updated)
-    // Route to debrief screen for Daily Rep sessions
+    // Save messages to currentSession so debrief can access them
+    onSaveMessages?.(msgs)
     if (session?.isDailyRep) {
       setScreen('daily-rep-debrief')
     } else {
-      setScreen('home')
+      setScreen('scenario-debrief')
+    }
+  }
+
+  const getHint = async () => {
+    if (hintLoading || loading) return
+    setHintLoading(true)
+    try {
+      const res = await fetch('/api/coaching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'simulation-hint',
+          conversationHistory: messages,
+          scenario: session?.scenarioData,
+        }),
+      })
+      const data = await res.json()
+      if (data.hint) {
+        setMessages((prev) => [...prev, { role: 'hint', content: data.hint }])
+        scrollDown()
+      }
+    } catch {
+      // silent fail — hint is optional
+    } finally {
+      setHintLoading(false)
     }
   }
 
   const bgFor = (role) => {
-    if (role === 'user') return C.coral
+    if (role === 'user')  return C.coral
     if (role === 'coach') return C.coralBg
+    if (role === 'hint')  return C.blueBg
     return C.surface
   }
-  const colorFor = (role) => (role === 'user' ? '#fff' : C.ink)
+  const colorFor = (role) => {
+    if (role === 'user') return '#fff'
+    if (role === 'hint') return C.blueDeep
+    return C.ink
+  }
+
+  const scenarioTitle = session?.scenarioData?.title || 'Role-play'
+  const diffMeta = DIFFICULTY_META[session?.difficulty || 'medium'] || DIFFICULTY_META.medium
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: C.bg }}>
       {/* Header */}
       <div style={{
-        padding: '16px 20px', borderBottom: `1px solid ${C.border}`,
-        display: 'flex', alignItems: 'center', gap: 12,
-        background: C.surface,
+        padding: '10px 16px', borderBottom: `1px solid ${C.border}`,
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: C.surface, flexShrink: 0,
       }}>
         <button
           onClick={() => {
             onSaveMessages?.(messages)
             setScreen(session?.scenarioData ? 'track-scenarios' : 'feedback')
           }}
-          style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20 }}
+          style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, flexShrink: 0, padding: '4px 4px 4px 0' }}
         >←</button>
-        <CoachAvatar size={32} />
-        <div>
-          <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 14 }}>Role-play</p>
-          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12 }}>
-            {SCENARIO_CHIPS.find((c) => c.id === session?.scenario)?.label || 'Practice conversation'}
-          </p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 14,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{scenarioTitle}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <span style={{
+              fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.04em',
+              color: diffMeta.color(C), background: diffMeta.bg(C),
+              padding: '1px 7px', borderRadius: 20,
+            }}>{diffMeta.label.toUpperCase()}</span>
+            {session?.scenarioData?.userRole && (
+              <span style={{ fontFamily: SANS, fontSize: 11, color: C.inkSoft, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                You: {session.scenarioData.userRole.split('—')[0].trim().split(' or ')[0].trim().split(',')[0].trim()}
+              </span>
+            )}
+          </div>
         </div>
+        <button
+          onClick={() => handleEnd()}
+          style={{
+            background: C.teal, color: '#fff', border: 'none', borderRadius: 10,
+            padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: SANS, flexShrink: 0,
+          }}
+        >End ✓</button>
       </div>
 
       {/* Messages */}
@@ -1562,16 +1617,27 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
             justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
             alignItems: 'flex-end', gap: 8,
           }}>
-            {m.role !== 'user' && m.role === 'coach' && <CoachAvatar size={26} />}
+            {m.role === 'coach' && <CoachAvatar size={26} />}
+            {m.role === 'hint' && (
+              <div style={{
+                fontSize: 16, flexShrink: 0, width: 26, height: 26,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>💡</div>
+            )}
             <div style={{
-              maxWidth: '76%', padding: '12px 16px', borderRadius: 16,
+              maxWidth: '80%', padding: '10px 14px', borderRadius: 16,
               background: bgFor(m.role), color: colorFor(m.role),
-              fontSize: 15, lineHeight: 1.6,
-              fontFamily: SERIF,
+              fontSize: m.role === 'hint' ? 14 : 15, lineHeight: 1.6,
+              fontFamily: m.role === 'hint' ? SANS : SERIF,
               fontStyle: m.role === 'coach' ? 'italic' : 'normal',
-              border: m.role === 'other' ? `1px solid ${C.border}` : 'none',
+              border: m.role === 'other' ? `1px solid ${C.border}` : m.role === 'hint' ? `1px solid ${C.blueDim}` : 'none',
               borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
             }}>
+              {m.role === 'hint' && (
+                <span style={{ fontWeight: 700, fontSize: 11, letterSpacing: '.05em', display: 'block', marginBottom: 4, color: C.blue }}>
+                  COACHING HINT
+                </span>
+              )}
               {m.content}
             </div>
           </div>
@@ -1587,9 +1653,25 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       </div>
 
       {/* Input */}
-      <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.surface }}>
+      <div style={{ borderTop: `1px solid ${C.border}`, background: C.surface, flexShrink: 0 }}>
+        {!done && (
+          <div style={{ textAlign: 'center', paddingTop: 8, paddingBottom: 2 }}>
+            <button
+              onClick={getHint}
+              disabled={hintLoading || loading}
+              style={{
+                background: 'none', border: 'none', color: hintLoading ? C.inkFaint : C.blue,
+                fontFamily: SANS, fontSize: 12, cursor: hintLoading ? 'default' : 'pointer',
+                padding: '2px 8px',
+              }}
+            >
+              {hintLoading ? 'Getting hint…' : '💡 Not sure what to say? Get a hint'}
+            </button>
+          </div>
+        )}
+        <div style={{ padding: '8px 16px 12px' }}>
         {done ? (
-          <Btn onClick={finish}>Complete session ✓</Btn>
+          <Btn onClick={() => handleEnd()}>Complete session ✓</Btn>
         ) : (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {/* Input with embedded mic */}
@@ -1644,6 +1726,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
             >→</button>
           </div>
         )}
+        </div>
       </div>
     </div>
   )
@@ -2413,15 +2496,13 @@ const DIFFICULTY_META = {
   hard:   { label: 'Hard',   color: C => C.coral,  bg: C => C.coralBg,  desc: 'Defensive, will push back hard'        },
 }
 
-function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSession }) {
+function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefing, currentSession, completedScenarios = [] }) {
   const [selected, setSelected] = useState(null)
-  const [difficulty, setDifficulty] = useState('medium')
 
   if (!track) { setScreen('scenarios'); return null }
 
   const handleSelect = (scenario) => {
-    setSelected(scenario)
-    setDifficulty(scenario.difficulty_default || 'medium')
+    setSelected(scenario === selected ? null : scenario)
   }
 
   return (
@@ -2436,6 +2517,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSessio
         {track.scenarios.map((scenario) => {
           const isSelected = selected?.id === scenario.id
           const diffDefault = DIFFICULTY_META[scenario.difficulty_default] || DIFFICULTY_META.medium
+          const isDone = completedScenarios.includes(scenario.id)
           // Check if there's a saved (resumable) conversation for this scenario
           const isResumable = currentSession?.scenario === scenario.id &&
             (currentSession?.messages?.length || 0) > 1
@@ -2451,7 +2533,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSessio
             >
               {/* Scenario header — always visible */}
               <button
-                onClick={() => handleSelect(isSelected ? null : scenario)}
+                onClick={() => handleSelect(scenario)}
                 style={{
                   width: '100%', textAlign: 'left', padding: '18px 20px',
                   background: 'transparent', border: 'none', display: 'flex', gap: 14, alignItems: 'flex-start',
@@ -2469,7 +2551,13 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSessio
                     }}>
                       {diffDefault.label.toUpperCase()}
                     </span>
-                    {isResumable && (
+                    {isDone && (
+                      <span style={{
+                        fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
+                        color: C.teal, background: C.tealBg, padding: '2px 8px', borderRadius: 20,
+                      }}>✓ Done</span>
+                    )}
+                    {isResumable && !isDone && (
                       <span style={{
                         fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
                         color: C.blue, background: C.blueBg, padding: '2px 8px', borderRadius: 20,
@@ -2481,17 +2569,17 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSessio
                     display: '-webkit-box', WebkitLineClamp: isSelected ? 100 : 2,
                     WebkitBoxOrient: 'vertical', overflow: 'hidden',
                   }}>
-                    {scenario.context}
+                    {scenario.context_short || scenario.context}
                   </p>
                 </div>
                 <span style={{ color: C.inkFaint, fontSize: 16, flexShrink: 0, marginTop: 2, transform: isSelected ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}>›</span>
               </button>
 
-              {/* Expanded: coaching focus + difficulty picker + start */}
+              {/* Expanded: coaching focus + start */}
               {isSelected && (
                 <div className="fade-in" style={{ padding: '0 20px 20px' }}>
                   {/* Coaching focus */}
-                  <div style={{ marginBottom: 16 }}>
+                  <div style={{ marginBottom: 18 }}>
                     <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 8 }}>
                       WHAT YOU'LL PRACTISE
                     </p>
@@ -2503,45 +2591,19 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSessio
                     ))}
                   </div>
 
-                  {/* Difficulty picker */}
-                  <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 8 }}>
-                    DIFFICULTY
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-                    {Object.entries(DIFFICULTY_META).map(([key, meta]) => (
-                      <button
-                        key={key}
-                        onClick={() => setDifficulty(key)}
-                        style={{
-                          flex: 1, padding: '10px 8px', borderRadius: 12, border: `1.5px solid ${difficulty === key ? meta.color(C) : C.border}`,
-                          background: difficulty === key ? meta.bg(C) : C.surface,
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                          transition: 'all .15s',
-                        }}
-                      >
-                        <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: difficulty === key ? meta.color(C) : C.inkSoft }}>
-                          {meta.label}
-                        </span>
-                        <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
-                          {meta.desc}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Resume or Start — depends on whether there's a saved conversation */}
+                  {/* Resume or Briefing — depends on whether there's a saved conversation */}
                   {isResumable ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <Btn onClick={() => setScreen('simulation')}>
                         Resume conversation →
                       </Btn>
-                      <Btn variant="secondary" onClick={() => onStartScenario(scenario, difficulty)}>
+                      <Btn variant="secondary" onClick={() => onViewBriefing(scenario)}>
                         Start fresh
                       </Btn>
                     </div>
                   ) : (
-                    <Btn onClick={() => onStartScenario(scenario, difficulty)}>
-                      Start scenario →
+                    <Btn onClick={() => onViewBriefing(scenario)}>
+                      {isDone ? 'Practise again →' : 'Start scenario →'}
                     </Btn>
                   )}
                 </div>
@@ -2550,6 +2612,308 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, currentSessio
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// SCENARIO BRIEFING SCREEN
+// ═══════════════════════════════════════════════
+function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStart, onBack }) {
+  const [difficulty, setDifficulty] = useState(initialDifficulty || scenario?.difficulty_default || 'medium')
+
+  if (!scenario) return null
+
+  return (
+    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+      {/* Back */}
+      <button
+        onClick={onBack}
+        style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 20, padding: 0 }}
+      >←</button>
+
+      {/* Title */}
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 8, lineHeight: 1.25 }}>
+          {scenario.title}
+        </h1>
+      </div>
+
+      {/* Role cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+        <div style={{ background: C.coralBg, borderRadius: 14, padding: '14px', border: `1px solid ${C.coralDim}` }}>
+          <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.coral, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 5 }}>
+            You play
+          </p>
+          <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 13, lineHeight: 1.45 }}>
+            {scenario.userRole}
+          </p>
+        </div>
+        <div style={{ background: C.surfaceSubtle, borderRadius: 14, padding: '14px', border: `1px solid ${C.border}` }}>
+          <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkSoft, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 5 }}>
+            Speaking with
+          </p>
+          <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 13, lineHeight: 1.45 }}>
+            {scenario.counterpartRole}
+          </p>
+        </div>
+      </div>
+
+      {/* The situation */}
+      <Card bg={C.surfaceSubtle} border={C.border} style={{ marginBottom: 14 }}>
+        <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+          The situation
+        </p>
+        <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>
+          {scenario.context_short || scenario.context}
+        </p>
+      </Card>
+
+      {/* Good outcome */}
+      {scenario.good_outcome && (
+        <Card bg={C.tealBg} border="#A7F3D0" style={{ marginBottom: 14 }}>
+          <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+            What good looks like
+          </p>
+          <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 14, lineHeight: 1.65 }}>
+            {scenario.good_outcome}
+          </p>
+        </Card>
+      )}
+
+      {/* Watch out for */}
+      {scenario.watch_out_for?.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 10 }}>
+            Watch out for
+          </p>
+          {scenario.watch_out_for.map((w, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 7, alignItems: 'flex-start' }}>
+              <span style={{ color: C.coral, fontSize: 13, flexShrink: 0, marginTop: 1 }}>⚠</span>
+              <p style={{ fontFamily: SERIF, color: C.inkMid, fontSize: 13, lineHeight: 1.5 }}>{w}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Difficulty picker */}
+      <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Difficulty
+      </p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {Object.entries(DIFFICULTY_META).map(([key, meta]) => (
+          <button
+            key={key}
+            onClick={() => setDifficulty(key)}
+            style={{
+              flex: 1, padding: '10px 8px', borderRadius: 12,
+              border: `1.5px solid ${difficulty === key ? meta.color(C) : C.border}`,
+              background: difficulty === key ? meta.bg(C) : C.surface,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              transition: 'all .15s',
+            }}
+          >
+            <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: difficulty === key ? meta.color(C) : C.inkSoft }}>
+              {meta.label}
+            </span>
+            <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
+              {meta.desc}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <Btn onClick={() => onStart(scenario, difficulty)}>Start Simulation →</Btn>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// SCENARIO DEBRIEF SCREEN
+// ═══════════════════════════════════════════════
+function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, completedScenarios = [] }) {
+  const [debrief, setDebrief]       = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [reflection, setReflection] = useState('')
+  const [saved, setSaved]           = useState(false)
+
+  const scenario = session?.scenarioData
+  const messages = session?.messages || []
+
+  useEffect(() => {
+    if (!scenario || messages.length < 2) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    fetch('/api/coaching', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: 'scenario-debrief',
+        conversationHistory: messages,
+        scenario: { title: scenario.title, coaching_focus: scenario.coaching_focus || [] },
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => setDebrief(d))
+      .catch(() => {
+        const focusScores = {}
+        ;(scenario.coaching_focus || []).forEach((f) => { focusScores[f] = 3 })
+        setDebrief({
+          overall_rating: 3,
+          overall_summary: 'You completed the simulation. Review the conversation above to identify your strongest and weakest moments.',
+          what_landed: 'You engaged with the scenario.',
+          what_created_friction: 'Some responses could have been sharper.',
+          try_this_instead: 'Focus on one specific improvement for your next attempt.',
+          the_principle: 'Precision earns credibility.',
+          focus_scores: focusScores,
+          next_challenge: 'Try the next difficulty level.',
+        })
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const DIFFICULTIES = ['easy', 'medium', 'hard']
+  const currentDiff  = session?.difficulty || 'medium'
+  const nextDiff     = DIFFICULTIES[Math.min(DIFFICULTIES.indexOf(currentDiff) + 1, DIFFICULTIES.length - 1)]
+  const nextDiffMeta = DIFFICULTY_META[nextDiff]
+
+  const Stars = ({ rating }) => (
+    <div style={{ display: 'flex', gap: 4, margin: '12px 0' }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <span key={s} style={{ fontSize: 24, color: s <= rating ? C.coral : C.border }}>★</span>
+      ))}
+    </div>
+  )
+
+  const SectionCard = ({ label, content, bg = C.surface, border = C.border, labelColor = C.inkSoft }) => (
+    <Card bg={bg} border={border} style={{ marginBottom: 12 }}>
+      <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: labelColor, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+        {label}
+      </p>
+      <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 14, lineHeight: 1.65 }}>{content}</p>
+    </Card>
+  )
+
+  return (
+    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+      {/* Header */}
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 20, padding: 0 }}>←</button>
+      <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+        Session complete ✓
+      </p>
+      <h1 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 4, lineHeight: 1.25 }}>
+        {scenario?.title || 'Debrief'}
+      </h1>
+
+      {loading ? (
+        <div style={{ padding: '48px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <Dots />
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 14 }}>Analysing your conversation…</p>
+        </div>
+      ) : debrief ? (
+        <>
+          {/* Rating */}
+          <Stars rating={debrief.overall_rating} />
+          <p style={{ fontFamily: SERIF, color: C.inkMid, fontSize: 15, lineHeight: 1.65, marginBottom: 20 }}>
+            {debrief.overall_summary}
+          </p>
+
+          {/* Section cards */}
+          <SectionCard label="What landed" content={debrief.what_landed} bg={C.tealBg} border="#A7F3D0" labelColor={C.teal} />
+          <SectionCard label="What created friction" content={debrief.what_created_friction} bg={C.coralBg} border={C.coralDim} labelColor={C.coral} />
+          <SectionCard label="Try this instead" content={debrief.try_this_instead} bg={C.blueBg} border={C.blueDim} labelColor={C.blue} />
+
+          {/* The principle */}
+          {debrief.the_principle && (
+            <div style={{ background: C.ink, borderRadius: 16, padding: '20px', marginBottom: 12 }}>
+              <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+                The Principle
+              </p>
+              <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 16, lineHeight: 1.65, fontStyle: 'italic' }}>
+                "{debrief.the_principle}"
+              </p>
+            </div>
+          )}
+
+          {/* Focus area bars */}
+          {scenario?.coaching_focus?.length > 0 && debrief.focus_scores && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 12 }}>
+                Focus areas
+              </p>
+              {scenario.coaching_focus.map((f, i) => {
+                const score = debrief.focus_scores?.[f] || 3
+                const pct   = Math.round((score / 5) * 100)
+                const barColor = score >= 4 ? C.teal : score >= 3 ? C.blue : C.coral
+                return (
+                  <div key={i} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <p style={{ fontFamily: SERIF, color: C.inkMid, fontSize: 13, lineHeight: 1.4, flex: 1, marginRight: 8 }}>{f}</p>
+                      <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 12, color: barColor }}>{score}/5</span>
+                    </div>
+                    <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 4, transition: 'width .5s ease' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Reflection */}
+          <div style={{ marginBottom: 20 }}>
+            <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.inkMid, marginBottom: 12 }}>
+              What's one thing you want to practise differently next time?
+            </p>
+            <VoiceTextarea
+              value={reflection}
+              onChange={setReflection}
+              placeholder="Your own words…"
+              minHeight={100}
+            />
+          </div>
+
+          {/* Actions */}
+          {saved ? (
+            <>
+              <div style={{ textAlign: 'center', padding: '14px', borderRadius: 14, background: C.tealBg, marginBottom: 16 }}>
+                <p style={{ fontFamily: SANS, color: C.teal, fontWeight: 700, fontSize: 15 }}>✓ Marked complete</p>
+              </div>
+              {nextDiff !== currentDiff && (
+                <Btn
+                  variant="secondary"
+                  onClick={() => onTryAgain(scenario, nextDiff)}
+                  style={{ marginBottom: 10 }}
+                >
+                  Try Again — {nextDiffMeta?.label} →
+                </Btn>
+              )}
+              <Btn variant="ghost" onClick={onBack}>Back to track</Btn>
+            </>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Btn onClick={() => { onMarkComplete(scenario?.id, reflection); setSaved(true) }}>
+                Save & Mark Complete ✓
+              </Btn>
+              {nextDiff !== currentDiff && (
+                <Btn variant="secondary" onClick={() => onTryAgain(scenario, nextDiff)}>
+                  Try Again — {nextDiffMeta?.label} →
+                </Btn>
+              )}
+              <Btn variant="ghost" onClick={onBack}>Back to track</Btn>
+            </div>
+          )}
+        </>
+      ) : (
+        <Card style={{ textAlign: 'center', padding: '28px' }}>
+          <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 15, fontStyle: 'italic' }}>
+            Debrief unavailable — try again in a moment.
+          </p>
+          <Btn onClick={onBack} style={{ marginTop: 16 }}>Back to track</Btn>
+        </Card>
+      )}
     </div>
   )
 }
@@ -2580,19 +2944,28 @@ export default function App() {
   // Scenario track state
   const [activeTrack, setActiveTrack] = useState(null)
 
+  // Scenario briefing state
+  const [activeBriefingScenario, setActiveBriefingScenario] = useState(null)
+  const [pendingBriefingDifficulty, setPendingBriefingDifficulty] = useState(null)
+
+  // Completed scenarios (from LS key 'completedScenarios')
+  const [completedScenarios, setCompletedScenarios] = useState([])
+
   // Coach session state
   const [coachSession, setCoachSession] = useState(null)
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedUser     = lsGet(LS.user, null)
-    const savedSessions = lsGet(LS.sessions, [])
-    const savedStorylab = lsGet(LS.storylab, { currentDay: 1, completedDays: [] })
-    const savedDailyRep = lsGet(LS.dailyRep, DAILY_REP_DEFAULTS)
+    const savedUser       = lsGet(LS.user, null)
+    const savedSessions   = lsGet(LS.sessions, [])
+    const savedStorylab   = lsGet(LS.storylab, { currentDay: 1, completedDays: [] })
+    const savedDailyRep   = lsGet(LS.dailyRep, DAILY_REP_DEFAULTS)
+    const savedCompleted  = lsGet(LS.completed, [])
 
     setSessions(savedSessions)
     setStorylab(savedStorylab)
     setDailyRep(savedDailyRep)
+    setCompletedScenarios(savedCompleted)
 
     if (savedUser?.onboarded) {
       setUser(savedUser)
@@ -2644,6 +3017,24 @@ export default function App() {
     })
     if (isForDailyRep) setPendingDailyRepDay(null)
     setScreen('simulation')
+  }
+
+  // Open the briefing screen for a scenario
+  const openBriefing = (scenario, initialDifficulty = null) => {
+    setActiveBriefingScenario(scenario)
+    setPendingBriefingDifficulty(initialDifficulty || scenario.difficulty_default || 'medium')
+    setScreen('scenario-briefing')
+  }
+
+  // Mark a scenario as completed and save reflection
+  const markScenarioComplete = (scenarioId, reflection) => {
+    if (!scenarioId) return
+    const updated = completedScenarios.includes(scenarioId)
+      ? completedScenarios
+      : [...completedScenarios, scenarioId]
+    setCompletedScenarios(updated)
+    lsSet(LS.completed, updated)
+    // Optionally store reflection alongside sessions — already done via session record
   }
 
   // Start a Daily Rep scenario (mini or track — not user-choice)
@@ -2714,7 +3105,7 @@ export default function App() {
     setScreen('practice')
   }
 
-  const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab', 'daily-rep', 'daily-rep-briefing', 'daily-rep-debrief']
+  const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab', 'daily-rep', 'daily-rep-briefing', 'daily-rep-debrief', 'scenario-briefing', 'scenario-debrief']
   const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation', 'daily-rep-insight'].includes(screen)
 
   const renderScreen = () => {
@@ -2873,6 +3264,27 @@ export default function App() {
           />
         )
 
+      case 'scenario-briefing':
+        return (
+          <ScenarioBriefingScreen
+            scenario={activeBriefingScenario}
+            initialDifficulty={pendingBriefingDifficulty}
+            onStart={(scenario, difficulty) => startScenario(scenario, difficulty)}
+            onBack={() => setScreen('track-scenarios')}
+          />
+        )
+
+      case 'scenario-debrief':
+        return (
+          <ScenarioDebriefScreen
+            session={currentSession}
+            completedScenarios={completedScenarios}
+            onBack={() => setScreen('track-scenarios')}
+            onTryAgain={(scenario, nextDiff) => openBriefing(scenario, nextDiff)}
+            onMarkComplete={(scenarioId, reflection) => markScenarioComplete(scenarioId, reflection)}
+          />
+        )
+
       case 'share':
         return <ShareScreen session={currentSession} setScreen={setScreen} />
 
@@ -2957,6 +3369,8 @@ export default function App() {
             track={activeTrack}
             setScreen={setScreen}
             onStartScenario={startScenario}
+            onViewBriefing={(scenario) => openBriefing(scenario)}
+            completedScenarios={completedScenarios}
             currentSession={currentSession}
           />
         )

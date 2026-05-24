@@ -98,6 +98,96 @@ export default async function handler(req, res) {
       return res.json({ reply: response.content[0].text })
     }
 
+    // ── Simulation hint — in-the-moment coaching nudge ────────────────────
+    if (mode === 'simulation-hint') {
+      const { conversationHistory, scenario: scen } = req.body
+
+      const filtered = (conversationHistory || []).filter((m) => m.role !== 'hint')
+      const last5    = filtered.slice(-5)
+      const convoText = last5.map((m) =>
+        `${m.role === 'user' ? 'PRACTITIONER' : 'COUNTERPART'}: ${m.content}`
+      ).join('\n\n')
+
+      const hintResponse = await client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 120,
+        system: `You are a communication coach giving a quick in-the-moment nudge during a role-play simulation. Give a direction or question — NOT a script for them to repeat verbatim. Max 2 sentences. Return valid JSON only, no markdown: {"hint": "..."}`,
+        messages: [{
+          role: 'user',
+          content: `Scenario: ${scen?.title || 'Professional conversation'}\n\nRecent conversation:\n${convoText}\n\nGive a brief coaching hint for the practitioner's next move.`,
+        }],
+      })
+
+      try {
+        const hRaw     = hintResponse.content[0].text.trim()
+        const hCleaned = hRaw.replace(/^```json?\s*/i, '').replace(/\s*```$/, '')
+        return res.json(JSON.parse(hCleaned))
+      } catch {
+        return res.json({ hint: 'Try being more specific — name exactly what you observed before drawing a conclusion.' })
+      }
+    }
+
+    // ── Scenario debrief — structured AI feedback after a simulation ──────
+    if (mode === 'scenario-debrief') {
+      const { conversationHistory, scenario: scen } = req.body
+
+      const filtered  = (conversationHistory || []).filter((m) => m.role !== 'hint')
+      const convoText = filtered.map((m) =>
+        `${m.role === 'user' ? 'PRACTITIONER' : 'COUNTERPART'}: ${m.content}`
+      ).join('\n\n')
+
+      const focusItems   = scen?.coaching_focus || []
+      const focusLines   = focusItems.map((f) => `"${f}": <integer 1-5>`).join(',\n    ')
+
+      const debriefResponse = await client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1000,
+        system: `You are a senior communication coach reviewing a professional role-play simulation. Be specific to what actually happened — do not give generic advice. Return valid JSON only, no markdown, no preamble.`,
+        messages: [{
+          role: 'user',
+          content: `Scenario: ${scen?.title || 'Professional conversation'}
+
+Coaching focus areas: ${focusItems.join(', ')}
+
+Simulation transcript:
+${convoText}
+
+Return this exact JSON structure — no extra keys, no markdown:
+{
+  "overall_rating": <integer 1-5>,
+  "overall_summary": "<2-3 sentences on overall performance — specific to this conversation>",
+  "what_landed": "<1-2 sentences on what worked — cite specific moments or approaches from the transcript>",
+  "what_created_friction": "<1-2 sentences on what held them back — specific, not generic>",
+  "try_this_instead": "<1-2 sentences of a concrete alternative approach they could try next time>",
+  "the_principle": "<One memorable coaching principle this conversation illustrates — 1 sentence>",
+  "focus_scores": {
+    ${focusLines}
+  },
+  "next_challenge": "<One sentence suggesting what to practise next>"
+}`,
+        }],
+      })
+
+      try {
+        const dRaw     = debriefResponse.content[0].text.trim()
+        const dCleaned = dRaw.replace(/^```json?\s*/i, '').replace(/\s*```$/, '')
+        return res.json(JSON.parse(dCleaned))
+      } catch {
+        const focusScores = {}
+        focusItems.forEach((f) => { focusScores[f] = 3 })
+        return res.json({
+          overall_rating: 3,
+          overall_summary: 'You completed the simulation — that takes practice. Review the transcript and look for moments where more specificity or directness could have shifted the dynamic.',
+          what_landed: 'You engaged with the scenario and kept the conversation moving forward.',
+          what_created_friction: 'Some responses could have been more precise or evidence-based.',
+          try_this_instead: 'Lead with the specific observation before your interpretation — it makes the message harder to dismiss.',
+          the_principle: 'Specificity builds credibility — vague language invites vague responses.',
+          focus_scores: focusScores,
+          next_challenge: 'Try the same scenario at a higher difficulty level and focus on your opening move.',
+        })
+      }
+    }
+
     // ── Pattern: analyse recent sessions ─────────────────────────────────
     if (mode === 'pattern') {
       const response = await client.messages.create({
@@ -136,8 +226,10 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('[coaching] API error:', error?.message || error)
 
-    if (mode === 'simulation') return res.json({ reply: "Let's pick this up again in a moment." })
-    if (mode === 'pattern')    return res.json({ pattern: 'Keep practising — patterns emerge over time.' })
+    if (mode === 'simulation')      return res.json({ reply: "Let's pick this up again in a moment." })
+    if (mode === 'simulation-hint') return res.json({ hint: 'Take a breath and focus on what you observed — lead with evidence, not interpretation.' })
+    if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: '', what_created_friction: '', try_this_instead: '', the_principle: '', focus_scores: {}, next_challenge: '' })
+    if (mode === 'pattern')         return res.json({ pattern: 'Keep practising — patterns emerge over time.' })
     return res.status(200).json(FALLBACK)
   }
 }

@@ -9,6 +9,13 @@ export const AUDIT_SCENARIOS = [
     counterpartRole: 'Process Owner — a mid-level manager who owns the control that failed. They are not malicious, just defensive and a bit embarrassed.',
     context: `You are in a one-on-one conversation with a Process Owner after completing fieldwork. You have identified that a key internal control — the four-eyes review on payment approvals — has not been operating for the past 6 months. Transactions above the €50,000 threshold were being approved by a single person. No fraud has occurred, but the control gap is real and must be reported.`,
     challenge: 'The Process Owner will likely minimise the issue, explain it away as a temporary gap, or push back on the severity. You need to deliver the finding clearly, maintain your objectivity, and get them to acknowledge the issue without damaging the relationship.',
+    context_short: 'A key payment approval control has not been operating for 6 months. The Process Owner didn\'t know — and will push back on the severity.',
+    good_outcome: 'The Process Owner acknowledges the finding clearly. You deliver it with evidence — not judgment — and leave with an agreed next step.',
+    watch_out_for: [
+      'Being so soft the message doesn\'t land',
+      'Accepting "nothing bad happened" as a defence',
+      'Letting them negotiate the severity rating down without new evidence',
+    ],
     opening_line: "Hey, thanks for making time. You mentioned you had some feedback from the audit fieldwork?",
     coaching_focus: [
       "Using evidence, not judgment ('I observed X' not 'You failed to do X')",
@@ -37,6 +44,13 @@ Play the Process Owner as follows:
     counterpartRole: "Head of Compliance at a bank — senior, experienced, and does not like being told their team missed something regulatory.",
     context: `During a regulatory compliance review, you have identified that the firm's transaction monitoring procedures do not meet the minimum requirements under the local AML regulation (equivalent to FINTRAC, FCA, or OSFI standards). Specifically, the lookback period for alerts is shorter than required, and there is no documented escalation path for high-risk alerts. This is a reportable gap that will likely appear in the external audit report.`,
     challenge: 'This is a senior stakeholder who may be embarrassed, dismissive, or try to reframe the finding as a \'documentation issue\' rather than a substantive compliance gap. You need to be firm, evidence-based, and clear about the consequences — without being adversarial.',
+    context_short: 'A regulatory review has revealed reportable AML gaps — a shorter-than-required lookback period and no documented escalation path for high-risk alerts.',
+    good_outcome: 'The Head of Compliance understands the severity, acknowledges the finding is substantive (not just a documentation gap), and commits to a remediation timeline.',
+    watch_out_for: [
+      'Accepting "it\'s just a documentation issue" when it isn\'t',
+      'Understating the consequences to soften the conversation',
+      'Getting drawn into a debate about regulatory interpretation instead of staying evidence-based',
+    ],
     opening_line: "Thanks for coming in. I want to understand exactly what you're planning to include before anything goes to paper — so let's hear it.",
     coaching_focus: [
       'Framing regulatory gaps without sounding accusatory',
@@ -65,6 +79,13 @@ Play the Head of Compliance as follows:
     counterpartRole: 'CFO or Finance Director — powerful, articulate, and genuinely believes the finding is wrong.',
     context: `You have issued a draft audit finding rating a reconciliation control as 'High Risk.' The CFO has requested this meeting to challenge the rating. They believe the compensating controls in place mean the risk is actually 'Low.' You have reviewed their argument and believe they are partially right — the compensating controls do reduce the risk somewhat — but the underlying control weakness is still real and should be rated 'Medium' at minimum.`,
     challenge: 'This is a high-stakes negotiation. The CFO is senior to you in the organisation and is well-prepared. You need to demonstrate that you have genuinely considered their argument, be willing to move from High to Medium (which is defensible), but not capitulate to Low (which would misrepresent the risk).',
+    context_short: 'You\'ve rated a reconciliation control as High Risk. The CFO has called a meeting to challenge it — and has a partially valid argument.',
+    good_outcome: 'You move from High to Medium after genuinely considering their compensating controls argument — not because of pressure, but because it\'s defensible. You hold Medium firmly.',
+    watch_out_for: [
+      'Capitulating all the way to Low when you haven\'t heard evidence that justifies it',
+      'Holding High rigidly without engaging with their compensating controls argument',
+      'Confusing confidence with rigidity — good auditors update when shown evidence, not when shown pressure',
+    ],
     opening_line: "Thank you for coming. I've reviewed your written response to the draft finding and I'd like to discuss it directly with you.",
     coaching_focus: [
       'Distinguishing genuine reconsideration from capitulation under pressure',
@@ -94,6 +115,13 @@ Play the CFO as follows:
     counterpartRole: 'A room of three people: a defensive Process Owner, a neutral CFO, and a supportive Internal Audit Director. You will play all three.',
     context: `You are running the closing meeting for a completed internal audit. You have 4 findings: one High, two Mediums, one Low. The High finding relates to a control failure in the procurement process. The Process Owner in the room owns that finding and has already pushed back in writing. The CFO is neutral but busy. The Audit Director is supportive of your work.`,
     challenge: "You need to present all findings clearly and professionally, manage the Process Owner's defensiveness in a group setting, and close the meeting with agreed management actions — all without losing the room or getting drawn into a debate.",
+    context_short: 'The closing audit meeting — four findings (one High), a defensive Process Owner, a neutral CFO, and a hard stop at 4:30.',
+    good_outcome: 'All findings are acknowledged, management actions are agreed, and you leave without having been forced into unplanned rating changes under group pressure.',
+    watch_out_for: [
+      'Treating every objection as equally valid — some deserve engagement, others need to be parked',
+      'Getting drawn into a detailed one-on-one debate in a group setting — offer to take it offline',
+      'Losing the room\'s attention by spending too long on a single point',
+    ],
     opening_line: "[CFO]: Right, let's get started — I have a hard stop at four-thirty. Take us through what you've found.",
     coaching_focus: [
       'Presenting findings confidently to a mixed audience',
