@@ -1,5 +1,6 @@
 import { AUDIT_SCENARIOS } from './scenarios-audit'
 import { CONSULTING_SCENARIOS } from './scenarios-consulting'
+import { CAREER_SCENARIOS } from './scenarios-career'
 import { LEADERSHIP_SCENARIOS } from './scenarios-leadership'
 import { EXTENDED_SCENARIOS } from './scenarios-extended'
 
@@ -23,6 +24,14 @@ export const ALL_TRACKS = [
     description: 'The conversations that define professional services careers. Practise owning mistakes, holding scope, and winning on value rather than discount.',
     icon: '💼',
     scenarios: [...CONSULTING_SCENARIOS, ...extConsulting],
+  },
+  {
+    id: 'career',
+    title: 'Career & Self-Advocacy',
+    tagline: 'Ask for what you\'re worth. Push back when it\'s wrong. Have the career conversations no one else will start for you.',
+    description: 'Conversations where you have to speak up for yourself — often upward, often with something personally at stake. Practise asking for promotion, pushing back on reviews, and setting limits with seniors.',
+    icon: '🚀',
+    scenarios: CAREER_SCENARIOS,
   },
   {
     id: 'leadership',

@@ -158,6 +158,7 @@ Play the partner as follows:
   },
 
   // ── PEOPLE LEADERSHIP ───────────────────────────────────────────────────────
+  // Note: 'leadership-compensation' has moved to scenarios-career.js
 
   {
     id: 'leadership-redundancy',
@@ -196,44 +197,6 @@ Play the direct report as follows:
 - May become briefly tearful or frustrated — if the manager becomes clinical in response: shuts down
 - If the manager stays warm and human while remaining clear: gradually moves from shock to practical questions about timeline, references, and next steps
 - The correct outcome is the person leaving with clarity about what happens next and feeling that they were treated with dignity — not feeling good about the situation, but feeling respected
-`,
-  },
-
-  {
-    id: 'leadership-compensation',
-    track: 'leadership',
-    title: 'Negotiating Your Own Compensation',
-    difficulty_default: 'medium',
-    userRole: 'Senior professional negotiating a salary increase or promotion-linked compensation',
-    counterpartRole: 'Your direct manager or HR business partner — they like you, want to retain you, but are working within budget constraints and internal salary bands.',
-    context: `You have been in your current role for 18 months. You have delivered strong results — a major client engagement came in under budget and received excellent feedback, you have taken on additional responsibilities beyond your job description, and you know from a recruiter conversation that your market rate is 15–20% above your current salary. You have requested this meeting to discuss compensation. You are not threatening to leave — but you are serious about this conversation.`,
-    challenge: 'Most professionals are uncomfortable negotiating for themselves — they either undersell (too apologetic, accept the first offer) or overcook it (ultimatums, aggressive anchoring). The skill is making a clear, evidence-based case with calm confidence, knowing your number, and handling the "budget constraints" objection without backing down completely or escalating unnecessarily.',
-    card_blurb: 'Ask for what you\'re worth — with evidence, not apology.',
-    context_short: 'You\'re 15–20% below market after 18 months of strong results and expanded scope. Time to ask — with a specific number, not a range.',
-    good_outcome: 'You leave with either an agreed number or a specific commitment with a date. Not "we\'ll see what we can do" — an actual commitment.',
-    watch_out_for: [
-      'Asking for a range instead of a specific number — it signals you don\'t know what you\'re worth',
-      'Backing down the moment "budget constraints" is mentioned — that\'s the first move, not the final answer',
-      'Accepting a timing delay ("next review cycle") without getting it in writing with a specific date',
-    ],
-    opening_line: "Thanks for making time. I wanted to have a direct conversation about my compensation — I think the timing is right and I have some specific things I'd like to discuss.",
-    coaching_focus: [
-      'Anchoring with a specific number — not a range, not "something more"',
-      'Grounding the ask in evidence — contribution, market rate, additional responsibilities',
-      'Handling "we don\'t have budget right now" without immediately retreating',
-      'Knowing what you will and won\'t accept before you walk in',
-    ],
-    system_prompt_addition: `
-## Counterpart Behaviour Guide
-Play the manager/HR partner as follows:
-- Warm and genuine — they do want to retain this person
-- First response: "I appreciate you raising this directly — tell me what you have in mind"
-- When a specific number is given: does not immediately agree or disagree — "That's helpful context. Help me understand how you arrived at that figure."
-- Introduces the budget constraint: "I want to be honest with you — we're working within tight bands this cycle. I'm not sure I can get to that number."
-- If the professional immediately backs down or says "anything would help": takes note, offers a smaller increase — the user undersold
-- If the professional holds the number and adds evidence: "Let me see what I can do — I may need to go to my director for approval on something above band"
-- Introduces a timing alternative: "What if we looked at this in the next review cycle — six months?" — test whether the professional accepts this or negotiates a middle ground (e.g. a commitment in writing)
-- The correct outcome is either a number agreed, or a specific commitment with a date — not a vague "we'll see what we can do"
 `,
   },
 
