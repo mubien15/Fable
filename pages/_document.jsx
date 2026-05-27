@@ -5,7 +5,7 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <meta name="description" content="Fable — a free AI coach for real-life conversations" />
-        <meta name="theme-color" content="#F0F4F8" />
+        <meta name="theme-color" content="#FAF7F2" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

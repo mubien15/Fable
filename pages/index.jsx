@@ -8,24 +8,24 @@ import { DAILY_REP_PROGRAM } from '../data/daily-rep'
 // ═══════════════════════════════════════════════
 const C = {
   // Backgrounds
-  bg: '#F0F4F8', surface: '#FFFFFF', surfaceSubtle: '#E8EEF4',
-  border: '#E2E8F0',
+  bg: '#FAF7F2', surface: '#FFFFFF', surfaceSubtle: '#F0EBE1',
+  border: 'rgba(28,43,74,0.12)',
 
   // Coral — CTAs and actions only
-  coral: '#E8572A', coralHover: '#C94520', coralLight: '#F5A07A',
-  coralDim: '#FCD5C3', coralBg: '#FEF0EB',
+  coral: '#E8644A', coralHover: '#F2856F', coralLight: '#F2856F',
+  coralDim: '#FAD5CC', coralBg: '#FEF0EB',
 
-  // Steel blue — identity, headings, active states
-  blue: '#3B82F6', blueDeep: '#1E40AF', blueDim: '#BFDBFE', blueBg: '#DBEAFE',
+  // Navy — identity, headings, active states (replaces steel blue)
+  blue: '#2D4070', blueDeep: '#1C2B4A', blueDim: '#C5D0E6', blueBg: '#E8EDF5',
 
-  // Track background tints
-  trackAudit: '#EFF6FF', trackConsulting: '#F0F9FF', trackLeadership: '#F0FDF4',
+  // Track background tints → warm cream
+  trackAudit: '#F0EBE1', trackConsulting: '#F0EBE1', trackLeadership: '#F0EBE1',
 
   // Teal — kept for positive feedback states
   teal: '#2BA084', tealBg: '#E8F7F4',
 
   // Text
-  ink: '#0F172A', inkMid: '#475569', inkSoft: '#64748B', inkFaint: '#94A3B8',
+  ink: '#1C2B4A', inkMid: '#2D4070', inkSoft: '#8C7B6B', inkFaint: '#A89B8C',
 }
 const SERIF = "'Lora', Georgia, serif"
 const SANS = "'DM Sans', system-ui, -apple-system, sans-serif"
@@ -159,8 +159,8 @@ function Btn({ children, onClick, variant = 'primary', disabled, style: s = {} }
   }
   const v = {
     primary:   { background: disabled ? C.coralDim : C.coral, color: disabled ? '#fff8' : '#fff' },
-    blue:      { background: C.blue, color: '#fff' },
-    secondary: { background: 'transparent', color: C.inkMid, border: `1.5px solid ${C.border}` },
+    blue:      { background: C.blueDeep, color: '#fff' },
+    secondary: { background: 'transparent', color: C.ink, border: `1.5px solid ${C.border}` },
     ghost:     { background: 'transparent', color: C.inkSoft, padding: '10px 20px', fontSize: 14 },
   }
   return (
@@ -277,7 +277,7 @@ function BottomNav({ active, onChange }) {
     <nav style={{
       position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
       width: '100%', maxWidth: 420,
-      background: 'rgba(255,251,245,0.92)', backdropFilter: 'blur(12px)',
+      background: 'rgba(250,247,242,0.92)', backdropFilter: 'blur(12px)',
       borderTop: `1px solid ${C.border}`,
       display: 'flex', zIndex: 200,
       paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingTop: 8,
@@ -516,6 +516,54 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
         </p>
       </div>
 
+      {/* ── Daily Practice ── */}
+      <div style={{ marginBottom: 28 }}>
+        <SectionLabel>Daily Practice</SectionLabel>
+        {completedCount === 0 && (
+          <div style={{ background: C.ink, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
+            <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
+              "30 days. 30 real conversations. Identify the habits holding you back."
+            </p>
+          </div>
+        )}
+        <Card style={{ background: C.surface }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+              background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+            }}>🎯</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase' }}>
+                  DAILY REP · DAY {dailyRep.currentDay || 1} · {currentDayData?.phase_label?.toUpperCase()}
+                </p>
+                {streak > 0 && (
+                  <span style={{ fontFamily: SANS, fontSize: 10, color: C.coral, background: C.coralBg, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
+                    🔥 {streak} streak
+                  </span>
+                )}
+              </div>
+              <p style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.ink, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentDayData?.title}
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkMid, marginBottom: 2 }}>
+                Today: {currentDayData?.focus}
+              </p>
+              <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint }}>
+                {currentDayData?.duration}
+              </p>
+            </div>
+          </div>
+          <div style={{ height: 4, background: C.border, borderRadius: 4, marginBottom: 14, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(completedCount / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
+          </div>
+          <Btn onClick={() => onStartDay(currentDayData)} style={{ borderRadius: 50 }}>
+            Start today's rep →
+          </Btn>
+        </Card>
+      </div>
+
       {/* ── Your Tracks ── */}
       <SectionLabel>Your Tracks</SectionLabel>
       {sortedTracks.map((track) => (
@@ -589,54 +637,6 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
           })}
         </div>
       )}
-
-      {/* ── Daily Rep ── */}
-      <div style={{ marginTop: 28 }}>
-        <SectionLabel>Daily Practice</SectionLabel>
-        {completedCount === 0 && (
-          <div style={{ background: C.ink, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
-            <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
-              "30 days. 30 real conversations. Identify the habits holding you back."
-            </p>
-          </div>
-        )}
-        <Card style={{ background: C.surface }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-              background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-            }}>🎯</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-                <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase' }}>
-                  DAILY REP · DAY {dailyRep.currentDay || 1} · {currentDayData?.phase_label?.toUpperCase()}
-                </p>
-                {streak > 0 && (
-                  <span style={{ fontFamily: SANS, fontSize: 10, color: C.coral, background: C.coralBg, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
-                    🔥 {streak} streak
-                  </span>
-                )}
-              </div>
-              <p style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 600, color: C.ink, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {currentDayData?.title}
-              </p>
-              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkMid, marginBottom: 2 }}>
-                Today: {currentDayData?.focus}
-              </p>
-              <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint }}>
-                {currentDayData?.duration}
-              </p>
-            </div>
-          </div>
-          <div style={{ height: 4, background: C.border, borderRadius: 4, marginBottom: 14, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${(completedCount / 30) * 100}%`, background: C.coral, borderRadius: 4, transition: 'width .4s' }} />
-          </div>
-          <Btn onClick={() => onStartDay(currentDayData)} style={{ borderRadius: 50 }}>
-            Start today's rep →
-          </Btn>
-        </Card>
-      </div>
     </div>
   )
 }
@@ -1953,7 +1953,7 @@ function DailyRepInsightScreen({ day, onContinue }) {
       className="fade-in"
       onClick={onContinue}
       style={{
-        height: '100dvh', background: '#0F172A',
+        height: '100dvh', background: C.blueDeep,
         display: 'flex', flexDirection: 'column',
         justifyContent: 'center', padding: '48px 32px',
         cursor: 'pointer', userSelect: 'none',
@@ -1961,27 +1961,27 @@ function DailyRepInsightScreen({ day, onContinue }) {
     >
       {/* Phase / Day label */}
       <p style={{
-        fontFamily: SANS, color: '#475569', fontSize: 11, fontWeight: 600,
+        fontFamily: SANS, color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600,
         letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 36,
       }}>
         Day {day.day} · {day.phase_label}
       </p>
 
       {/* Insight quote */}
-      <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 22, lineHeight: 1.7, marginBottom: 48 }}>
+      <p style={{ fontFamily: SERIF, color: 'rgba(255,255,255,0.95)', fontSize: 22, lineHeight: 1.7, marginBottom: 48 }}>
         "{day.insight}"
       </p>
 
       {/* Focus accent */}
       <div style={{ borderLeft: `3px solid ${C.coral}`, paddingLeft: 18, marginBottom: 56 }}>
-        <p style={{ fontFamily: SANS, color: '#64748B', fontSize: 12, marginBottom: 4 }}>Today's focus</p>
-        <p style={{ fontFamily: SANS, color: '#CBD5E1', fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
+        <p style={{ fontFamily: SANS, color: 'rgba(255,255,255,0.45)', fontSize: 12, marginBottom: 4 }}>Today's focus</p>
+        <p style={{ fontFamily: SANS, color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: 600, lineHeight: 1.4 }}>
           {day.focus}
         </p>
       </div>
 
       {/* Tap hint */}
-      <p style={{ fontFamily: SANS, color: '#334155', fontSize: 12, textAlign: 'center', animation: 'pulse 2s ease-in-out infinite' }}>
+      <p style={{ fontFamily: SANS, color: 'rgba(255,255,255,0.3)', fontSize: 12, textAlign: 'center', animation: 'pulse 2s ease-in-out infinite' }}>
         tap anywhere to continue
       </p>
     </div>
@@ -2441,7 +2441,7 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
             background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
             transition: 'border-color .15s, box-shadow .15s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(255,107,61,.1)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(232,100,74,.1)' }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
         >
           <div style={{
