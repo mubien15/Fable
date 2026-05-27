@@ -469,7 +469,7 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════
-const TRACK_BG = { audit: C.trackAudit, consulting: C.trackConsulting, leadership: C.trackLeadership }
+const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface }
 
 function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay }) {
   const greeting = (() => {
