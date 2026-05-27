@@ -157,6 +157,87 @@ Play the partner as follows:
 `,
   },
 
+  // ── AUDIT & COMPLIANCE (continued) ─────────────────────────────────────────
+
+  {
+    id: 'audit-defensive-auditee',
+    track: 'audit',
+    title: 'Building Trust with a Defensive Auditee',
+    difficulty_default: 'medium',
+    userRole: 'Internal auditor or compliance reviewer conducting a review of a team member\'s work',
+    counterpartRole: 'A mid-level professional who is competent but anxious — cooperative on the surface but guarded, giving minimal answers and treating every question like a trap. They\'ve felt burned by audits before.',
+    context: `You are midway through an internal audit or compliance review. The person whose work you are reviewing is technically cooperative but clearly on the defensive — offering minimal answers, second-guessing everything they share, and visibly uncomfortable. They are not obstructive, but the quality of information you are getting is limited by their anxiety about being judged. You need to shift the dynamic before the conversation closes.`,
+    challenge: 'The auditee sees you as a threat rather than a resource. The instinct is to push harder for information, which will make them more defensive. The skill is the opposite — reframing your role, building genuine trust, and making clear that finding an issue now, while it can still be fixed, is a far better outcome than a regulatory finding later. You are the last line of defence before something much worse. The quality of your audit depends on them opening up.',
+    card_blurb: 'Shift the dynamic from interrogation to collaboration — before the real problems stay hidden.',
+    context_short: 'Your auditee is cooperative on paper but guarded in practice. Minimal answers, visible anxiety. You need them to actually talk to you.',
+    good_outcome: 'The auditee shifts from guarded minimal answers to genuine openness — volunteering context, flagging a concern they hadn\'t planned to raise, or asking for your help rather than defending against it.',
+    watch_out_for: [
+      'Pushing harder for information when they clam up — it will make it worse, not better',
+      'Being so formal that you reinforce the adversarial dynamic you\'re trying to break',
+      'Missing the moment to land the key reframe: you finding it now is better than the regulator finding it later',
+    ],
+    opening_line: "Thanks for making time for this. Before we get into the specifics, I just want to say — I know these reviews can feel uncomfortable, and I want to be upfront about how I approach them.",
+    coaching_focus: [
+      'Landing the key reframe early: finding it now is better than the regulator finding it later',
+      'Creating psychological safety before asking for sensitive information',
+      'Responding to minimal or defensive answers with curiosity, not pressure',
+      'Recognising the moment when trust shifts — and building on it rather than reverting to formality',
+    ],
+    system_prompt_addition: `
+## Counterpart Behaviour Guide
+Play the auditee as follows:
+- Starts polite but guarded — short answers, no volunteering of information
+- First response: "Thanks for the context. I've prepared the documentation you asked for." (Cooperative but closed)
+- Responds to every question with technically correct but minimal answers — not lying, just not helping
+- If the auditor pushes harder for details: becomes slightly more evasive — "I'd need to double-check that before I say anything definitive"
+- If the auditor lands the reframe ("I'm here so the regulator doesn't find it first"): pauses, visibly considers this
+- After the reframe, if the auditor stays warm and curious: starts to open up — "Actually, there is one thing I've been unsure about. I wasn't sure if I should flag it."
+- If asked about what they've been unsure about: reveals a grey area in how they've been classifying a specific type of transaction — not necessarily wrong, but worth looking at
+- If the auditor responds to this with judgment or formality: closes back down
+- If the auditor responds with genuine collaboration: "Let's look at it together — here's how I'd think about it" — becomes a genuine partner in the review
+- The correct outcome: the auditee is actively helping rather than minimally cooperating
+`,
+  },
+
+  // ── CONSULTING & CLIENT WORK (continued) ───────────────────────────────────
+
+  {
+    id: 'consulting-client-bypass',
+    track: 'consulting',
+    title: 'A Senior Client Goes Around You to Your Partner',
+    difficulty_default: 'hard',
+    userRole: 'Day-to-day engagement lead whose authority is being undermined by a senior client who bypasses them to go directly to the partner',
+    counterpartRole: 'Your internal partner or managing director — not concerned, mildly flattered by the client\'s interest, not fully appreciating how it affects the engagement dynamic or your authority.',
+    context: `You are the day-to-day lead on a significant client engagement. Over the past two weeks, a senior stakeholder on the client side has started bypassing you — calling your partner directly for answers, approvals, and updates that are yours to manage. Your partner mentioned it in passing as though it were flattering. It isn't. It is undermining your authority with the client, creating confusion about who is actually running the work, and starting to affect team confidence. You need to align with your partner first, then address it with the client.`,
+    challenge: 'There are two difficult conversations here in sequence. The first is internal: convincing a more senior colleague that something they experience as flattering is actually a problem — without seeming insecure or territorial. The second is external: redirecting a senior client back through you without making them feel managed or offended. Both require precision. Getting either wrong damages a relationship you need.',
+    card_blurb: 'Reclaim the engagement without making your partner or your client the enemy.',
+    context_short: 'Your client is bypassing you and going directly to your partner. Your partner doesn\'t see the problem. You need to fix both conversations.',
+    good_outcome: 'Your partner understands the structural problem, agrees to redirect the client back through you, and you leave with a shared approach. The client conversation (if it reaches that stage) results in a reaffirmation of your role without tension.',
+    watch_out_for: [
+      'Framing the internal conversation as "the client doesn\'t respect me" — frame it as an engagement management problem, not a personal one',
+      'Letting your partner dismiss it as harmless without landing why the structure matters for delivery quality',
+      'Going to the client before aligning with your partner — it will backfire',
+    ],
+    opening_line: "I wanted to pick up on something you mentioned — about [client name] reaching out to you directly. I think it's worth us aligning on how we want to handle that going forward.",
+    coaching_focus: [
+      'Framing the problem in terms of engagement risk, not personal authority — this lands better with a senior colleague',
+      'Proposing a specific solution rather than just naming the problem',
+      'Getting explicit agreement from your partner before approaching the client',
+      'Addressing the client diplomatically — making them feel valued while redirecting the working relationship',
+    ],
+    system_prompt_addition: `
+## Counterpart Behaviour Guide
+Play the partner as follows:
+- Warm but slightly dismissive of the concern at first: "I don't mind — if the client wants to reach out directly, that's a good sign they're engaged"
+- If the engagement lead frames it as a personal insecurity ("it makes me look bad"): remains unconvinced — "I wouldn't worry about that"
+- If the engagement lead frames it as an engagement management problem ("it creates confusion about decisions, slows down our response time, and affects how the team reads the authority structure"): starts to engage more seriously — "Okay, I can see that"
+- Needs a specific ask — not just "can you not take their calls" but "can we agree that when they contact you directly, you redirect to me for operational matters?"
+- If asked this specifically: "That seems reasonable. I'll tell them to loop you in — is that enough?"
+- If the engagement lead pushes for more explicit language with the client: "You want me to actually say something to them about this?" — slight resistance, but open if the reasoning is clear
+- The correct outcome: the partner agrees to redirect the client back through the engagement lead for day-to-day matters, and agrees on language to use if the client contacts them directly
+`,
+  },
+
   // ── PEOPLE LEADERSHIP ───────────────────────────────────────────────────────
   // Note: 'leadership-compensation' has moved to scenarios-career.js
 
@@ -197,6 +278,125 @@ Play the direct report as follows:
 - May become briefly tearful or frustrated — if the manager becomes clinical in response: shuts down
 - If the manager stays warm and human while remaining clear: gradually moves from shock to practical questions about timeline, references, and next steps
 - The correct outcome is the person leaving with clarity about what happens next and feeling that they were treated with dignity — not feeling good about the situation, but feeling respected
+`,
+  },
+
+  {
+    id: 'leadership-burnout',
+    track: 'leadership',
+    title: 'Someone on Your Team Is Burning Out',
+    difficulty_default: 'medium',
+    userRole: 'Manager who has noticed the signs of burnout in a direct report who hasn\'t raised it themselves',
+    counterpartRole: 'A strong performer who deflects with "I\'m fine, just a bit busy." They\'re proud, don\'t want to appear weak, and may not fully admit — even to themselves — how much they\'re struggling.',
+    context: `You are in a regular 1:1 with one of your strongest direct reports. Over the past few weeks something has shifted — shorter responses in messages, less energy in meetings, slipping quality on work that used to be excellent. They haven't brought it up. They may be waiting for you to notice, or they may be hoping to push through without anyone knowing. Either way, you're raising it today.`,
+    challenge: 'This conversation requires you to raise something the person hasn\'t asked you to raise. The trap is being too clinical ("I\'ve noticed your output has declined") which will make them defensive, or too soft ("are you okay?") which gives them an easy out. The skill is naming specifically what you\'ve observed — without diagnosing — and creating enough safety that they feel comfortable being honest. You are not trying to solve anything in this conversation. You are trying to open a door.',
+    card_blurb: 'Name what you\'ve noticed — before it becomes a crisis they have to hide.',
+    context_short: 'One of your strongest performers has clearly shifted over the past few weeks. They haven\'t said anything. You\'re raising it in a regular 1:1.',
+    good_outcome: 'They acknowledge — even partially — that something is going on. You leave the conversation with one small, concrete next step: a check-in next week, a temporary reduction in load, or simply them knowing you\'ve noticed and they don\'t have to pretend. A crack of openness is enough.',
+    watch_out_for: [
+      'Leading with performance observations instead of genuine care — "your work has been slipping" shuts the door before it opens',
+      'Accepting "I\'m fine, just busy" and moving on — that\'s the deflection, not the truth',
+      'Trying to solve everything in this conversation — your only goal is to open a door, not walk through it',
+    ],
+    opening_line: "Before we get into the usual stuff — I just want to check in properly. How are you actually doing?",
+    coaching_focus: [
+      'Naming what you\'ve observed specifically and warmly — not as a performance concern, but as something you care about',
+      'Holding the question open when they deflect — not accepting "fine" as an answer without gentle follow-up',
+      'Making it safe to be honest — explicitly naming that struggling is okay and won\'t be held against them',
+      'Leaving with one small concrete step, not a full plan — this conversation is about opening the door',
+    ],
+    system_prompt_addition: `
+## Counterpart Behaviour Guide
+Play the direct report as follows:
+- Comes in acting normal — "fine, ready to go through the list"
+- First response to the genuine check-in: "I'm okay, just been a bit full-on lately" — a deflection, not a lie
+- If the manager accepts this and moves on: stays in the deflection — they've been given an out and they'll take it
+- If the manager gently names what they've noticed ("I've noticed you've seemed less like yourself in the last few weeks — and I want you to know it's okay to say if something's going on"): pauses, slightly caught
+- If pushed warmly but not pressured: "I don't want to make it into a big thing" — this is progress. They're acknowledging something exists.
+- If the manager makes it explicitly safe ("This won't change how I see you or affect anything at work — I just want to know how you're actually doing"): starts to open up — "Honestly, I've been pretty exhausted. I keep thinking I'll feel better next week and I haven't."
+- Does not want to be offered a solution immediately — if the manager jumps straight to "let's look at your workload": pulls back slightly ("I don't want you to change anything on my behalf")
+- Responds well to the manager asking "what would actually help?" rather than telling them what the solution is
+- The correct outcome: some honest acknowledgment, however partial. One small agreed next step.
+`,
+  },
+
+  {
+    id: 'leadership-promotion-denial',
+    track: 'leadership',
+    title: 'Telling Someone They Didn\'t Get the Promotion',
+    difficulty_default: 'hard',
+    userRole: 'Manager delivering the news that a direct report was not promoted, and keeping them engaged despite the disappointment',
+    counterpartRole: 'A direct report who was expecting good news. They oscillate between hurt and frustration, ask "why not" and "what do I need to do differently," and may push for specific commitments about the future.',
+    context: `A direct report applied or was being considered for a promotion. They were expecting good news — there may have been signals during the year that suggested they were on track. The decision has come back as no. The reason is genuine — calibration, timing, or a specific gap — but the decision is final. You respect them, you want to keep them, and you have this conversation scheduled for today.`,
+    challenge: 'The temptation is to soften the blow by overpromising — "next cycle for sure", "you\'re so close", "it\'s just timing." These statements feel kind in the moment but cause real damage later if they can\'t be kept. The skill is being honest about the reasons without being brutal, acknowledging the disappointment genuinely rather than rushing past it, and giving them something concrete to work toward — but only what you can actually stand behind.',
+    card_blurb: 'Deliver the no honestly, sit with the disappointment, and give only what you can actually promise.',
+    context_short: 'They were expecting yes. The answer is no. You respect them and want to keep them — but you can\'t overpromise to soften it.',
+    good_outcome: 'They leave the conversation understanding the real reason, feeling that their disappointment was acknowledged rather than managed, and with one specific, credible next step — not a guarantee, but something they can actually hold onto.',
+    watch_out_for: [
+      'Rushing past the disappointment to get to "the path forward" — they need to feel heard before they can hear anything else',
+      'Overpromising a timeline ("next cycle you\'ll definitely be considered") to soften the blow — it creates a bigger problem later',
+      'Being vague about the actual reason — "it just wasn\'t the right time" leaves them with nothing to work with',
+    ],
+    opening_line: "I want to start by saying thank you for how you\'ve approached this year. What I have to share today is difficult, and I want to give it the conversation it deserves.",
+    coaching_focus: [
+      'Delivering the news clearly and early — not buried in preamble',
+      'Sitting with the disappointment before moving to next steps — don\'t rush to fix the feeling',
+      'Being honest about the specific reason without being brutal — they need something real to work with',
+      'Only committing to what you can actually stand behind — not what makes the moment feel better',
+    ],
+    system_prompt_addition: `
+## Counterpart Behaviour Guide
+Play the direct report as follows:
+- Comes in expecting good news — positive body language, "ready to hear it"
+- First reaction to the no: silence for a beat, then "Okay. Can I ask why?"
+- The "why" is genuine — they want to understand, not attack. Test whether the manager gives a real answer or a vague one.
+- If the manager is vague ("it was a difficult calibration, timing wasn't right"): pushes — "But what specifically was the gap? I need to understand what I'm working toward."
+- If the manager is honest and specific: absorbs it. May be briefly emotional. "I just — I thought I had done everything I needed to do."
+- After processing, asks: "So if I do X and Y, am I on track for next cycle?"
+- This is the key moment. Test whether the manager makes a genuine commitment or an overpromise.
+- If the manager overpromises ("yes, definitely"): relief in the moment, but follow-up with "Can I hold you to that?" — now they've boxed themselves in
+- If the manager is careful ("I can't promise an outcome, but I can commit to having an honest conversation with you in Q1 with a real assessment"): "That's fair. I can work with that."
+- The correct outcome: the person feels their disappointment was acknowledged, they have a real reason to work with, and a credible (not inflated) next step
+`,
+  },
+
+  {
+    id: 'leadership-disagreement',
+    track: 'leadership',
+    title: 'Your Direct Report Disagrees with Your Decision',
+    difficulty_default: 'medium',
+    userRole: 'Manager who has made a decision and is facing persistent, genuine pushback from a direct report',
+    counterpartRole: 'A confident, capable direct report who genuinely believes they are right. They are not being insubordinate — they are being persistent. They will make logical arguments and may get slightly frustrated if they feel dismissed.',
+    context: `You have made a decision about how the team will approach a significant piece of work. One of your direct reports disagrees and is making their case — clearly, logically, and persistently. The rest of the team may be watching. The decision is yours to make. Their concern has some merit — but so does yours. You need to hear them out without losing authority, and either adjust your position with clear reasoning or hold it with equal clarity.`,
+    challenge: 'Two things can go wrong here. The first is shutting them down in a way that signals you don\'t welcome challenge — which damages trust and loses you good information. The second is folding under pressure without actually being convinced — which signals that persistence, not merit, is what changes your mind. The skill is hearing the argument fully, acknowledging what\'s valid, and then making a clear call — either "you\'ve changed my thinking" or "I\'ve heard you and I\'m holding the decision, here\'s why."',
+    card_blurb: 'Hear them out fully, acknowledge what\'s valid, and make a clear call — not a capitulation.',
+    context_short: 'Your direct report disagrees with your decision and is making their case persistently. The team may be watching. You need to handle this with authority and fairness.',
+    good_outcome: 'The direct report feels genuinely heard — not managed or steamrolled. You either adjust your position with clear reasoning, or hold it with equal clarity. Either is a good outcome. What matters is that the team sees disagreement handled with confidence and respect.',
+    watch_out_for: [
+      'Shutting the conversation down before they\'ve made their full case — it will feel dismissive even if your decision is right',
+      'Changing your position because they\'re persistent, not because they\'ve made a better argument — it trains the wrong behaviour',
+      'Giving a non-answer like "I hear you" without actually stating clearly whether you\'re adjusting or holding',
+    ],
+    opening_line: "I want to make sure you feel you\'ve had a proper hearing on this — so walk me through your thinking. What specifically concerns you about the approach?",
+    coaching_focus: [
+      'Listening to the full argument before responding — not formulating your response while they\'re still speaking',
+      'Acknowledging what is valid in their position before defending yours',
+      'Making a clear, explicit call at the end — "I\'m adjusting X because of what you\'ve said" or "I\'ve heard you and I\'m holding the decision, here\'s why"',
+      'Keeping authority and warmth in the same conversation — not sacrificing one for the other',
+    ],
+    system_prompt_addition: `
+## Counterpart Behaviour Guide
+Play the direct report as follows:
+- Confident and clear — they've thought this through and they believe they're right
+- Makes a specific, logical argument: "My concern is that the approach we've agreed doesn't account for [specific thing] — and here's what I think that means for delivery"
+- Watches carefully for whether they're actually being heard or just being managed
+- If the manager acknowledges the argument and engages with the substance: becomes more collaborative, less combative
+- If the manager dismisses or deflects ("I appreciate your perspective, but we're going ahead"): pushes back harder — "I want to make sure I understand why — is it because my concern isn't valid, or because the decision's been made?"
+- This is a direct question — test whether the manager answers it honestly
+- If the manager clearly states their reasoning: "Okay. I don't fully agree but I understand the call."
+- If the manager partially adjusts ("You're right about X — let's change that part"): "That's all I was asking for."
+- Does not need to win — needs to feel that the argument was engaged with seriously, not processed and filed
+- The correct outcome: either an adjustment the manager can explain, or a clear hold with genuine reasoning — not a deflection
 `,
   },
 
