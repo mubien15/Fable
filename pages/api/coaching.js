@@ -226,6 +226,8 @@ Return this exact JSON structure — no extra keys, no markdown:
   } catch (error) {
     console.error('[coaching] API error:', error?.message || error)
 
+    if (mode === 'coach')           return res.json({ reply: "I'm here with you. Take your time." })
+    if (mode === 'coach-debrief')   return res.json({ insight: 'Something shifted in this conversation — give yourself time to sit with it.', nextStep: 'Notice what came up and let it settle before deciding what to do next.' })
     if (mode === 'simulation')      return res.json({ reply: "Let's pick this up again in a moment." })
     if (mode === 'simulation-hint') return res.json({ hint: 'Take a breath and focus on what you observed — lead with evidence, not interpretation.' })
     if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: '', what_created_friction: '', try_this_instead: '', the_principle: '', focus_scores: {}, next_challenge: '' })

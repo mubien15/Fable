@@ -1914,7 +1914,10 @@ function ProgressScreen({ sessions, setScreen }) {
           </Card>
         ) : (
           sessions.slice().reverse().map((s) => {
-            const chip = SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario || 'Session' }
+            const trackMatch = findTrackScenario(s.scenario)
+            const chip = trackMatch
+              ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
+              : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: s.lifeAreaIcon || '💬', label: s.label || s.scenario || 'Session' }
             return (
               <div key={s.id} style={{
                 display: 'flex', gap: 12, padding: '14px 0', borderBottom: `1px solid ${C.border}`,
@@ -2152,8 +2155,8 @@ function DailyRepDebriefScreen({ day, setScreen, onComplete }) {
           <Btn onClick={() => setScreen('home')}>Back to home →</Btn>
         </>
       ) : (
-        <Btn onClick={save} disabled={!reflection.trim()}>
-          Save reflection →
+        <Btn onClick={save}>
+          {reflection.trim() ? 'Save reflection →' : 'Complete day →'}
         </Btn>
       )}
     </div>
@@ -2487,7 +2490,7 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
           background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
           transition: 'border-color .15s, box-shadow .15s',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(232,87,42,.1)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(232,100,74,.1)' }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
       >
         <div style={{
