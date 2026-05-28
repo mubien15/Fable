@@ -1425,10 +1425,95 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     session?.messages?.slice(1).some((m) => m.role === 'coach') || false
   )
   const [listening, setListening] = useState(false)
+  // ── Voice mode ──────────────────────────────────────────────────────────────
+  const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const audioRef          = useRef(null)
+  const triggerAutoMicRef = useRef(null)  // always-fresh ref avoids stale closure
+  // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const recRef = useRef(null)
   const finalRef = useRef('')
+
+  // Keep triggerAutoMicRef fresh on every render so audio.onended always sees
+  // the latest done / loading / voiceEnabled state.
+  const triggerAutoMic = () => {
+    if (done || loading || !voiceEnabled) return
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+    recRef.current?.stop()
+    const r = new SR()
+    r.continuous = true
+    r.interimResults = true
+    r.lang = 'en-US'
+    finalRef.current = ''
+    setInput('')
+    r.onresult = (e) => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
+        else interim += e.results[i][0].transcript
+      }
+      setInput(finalRef.current + interim)
+    }
+    r.onerror = () => setListening(false)
+    r.onend   = () => setListening(false)
+    r.start()
+    recRef.current = r
+    setListening(true)
+  }
+  triggerAutoMicRef.current = triggerAutoMic  // update ref every render
+
+  const speak = async (text, voice = 'onyx') => {
+    if (!voiceEnabled || !text) return
+    setIsPlaying(true)
+    try {
+      const ttsText = text.length > 500 ? text.slice(0, 497) + '…' : text
+      const res = await fetch('/api/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: ttsText, voice }),
+      })
+      if (!res.ok) throw new Error('TTS failed')
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      if (audioRef.current) {
+        audioRef.current.onended = null
+        audioRef.current.pause()
+        URL.revokeObjectURL(audioRef.current.src)
+      }
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onended = () => {
+        setIsPlaying(false)
+        URL.revokeObjectURL(url)
+        triggerAutoMicRef.current?.()  // use ref for fresh state
+      }
+      audio.onerror = () => { setIsPlaying(false) }
+      await audio.play()
+    } catch {
+      setIsPlaying(false)
+    }
+  }
+
+  const stopSpeaking = () => {
+    if (audioRef.current) {
+      audioRef.current.onended = null  // prevent auto-mic when manually stopped
+      audioRef.current.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  // Auto-speak the opening line when session starts (voice mode only)
+  useEffect(() => {
+    if (voiceEnabled && session?.scenarioData?.opening_line && !(session?.messages?.length > 0)) {
+      const t = setTimeout(() => {
+        speak(session.scenarioData.opening_line, session.scenarioData.voice || 'onyx')
+      }, 600)
+      return () => clearTimeout(t)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleMic = () => {
     if (listening) {
@@ -1502,7 +1587,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       const hasCoach = reply.includes('[COACH]')
       const parts = hasCoach ? reply.split('[COACH]') : [reply, null]
 
-      const toAdd = [{ role: 'other', content: parts[0].trim() }]
+      const counterpartText = parts[0].trim()
+      const toAdd = [{ role: 'other', content: counterpartText }]
       if (parts[1]) {
         // AI decided to end — show coach note and mark done
         toAdd.push({ role: 'coach', content: parts[1].replace(':', '').trim() })
@@ -1513,12 +1599,17 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       }
 
       setMessages((prev) => [...prev, ...toAdd])
+
+      // Speak the counterpart's reply in voice mode (don't speak the coach note)
+      if (voiceEnabled) {
+        speak(counterpartText, session?.scenarioData?.voice || 'onyx')
+      }
     } catch {
       setMessages((prev) => [...prev, { role: 'other', content: "Let's pick this up in a moment." }])
     } finally {
       setLoading(false)
       scrollDown()
-      inputRef.current?.focus()
+      if (!voiceEnabled) inputRef.current?.focus()
     }
   }
 
@@ -1620,6 +1711,21 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
             )}
           </div>
         </div>
+        {/* Voice / Text mode toggle */}
+        <button
+          onClick={() => { if (isPlaying) stopSpeaking(); setVoiceEnabled((v) => !v) }}
+          style={{
+            background: voiceEnabled ? C.blueBg : 'transparent',
+            border: `1px solid ${voiceEnabled ? C.blueDim : C.border}`,
+            color: voiceEnabled ? C.blue : C.inkSoft,
+            borderRadius: 20, padding: '5px 10px',
+            fontFamily: SANS, fontSize: 11, fontWeight: 600,
+            flexShrink: 0, whiteSpace: 'nowrap',
+          }}
+          title={voiceEnabled ? 'Switch to text mode' : 'Switch to voice mode'}
+        >
+          {voiceEnabled ? '🔊 Voice' : '💬 Text'}
+        </button>
         <button
           onClick={() => handleEnd()}
           style={{
@@ -1693,7 +1799,104 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         <div style={{ padding: '8px 16px 12px' }}>
         {done ? (
           <Btn onClick={() => handleEnd()}>Complete session ✓</Btn>
+        ) : voiceEnabled ? (
+
+          /* ── VOICE MODE INPUT PANEL ──────────────────────────────────── */
+          <div style={{ textAlign: 'center' }}>
+
+            {isPlaying ? (
+              /* AI is speaking */
+              <div
+                onClick={stopSpeaking}
+                style={{ cursor: 'pointer', padding: '10px 0 4px', userSelect: 'none' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: 32, marginBottom: 6 }}>
+                  {[0, 0.15, 0.3, 0.15, 0].map((delay, i) => (
+                    <span key={i} style={{
+                      display: 'block', width: 4, borderRadius: 2,
+                      background: C.blue,
+                      animation: `voiceWave 1.2s ease-in-out ${delay}s infinite`,
+                    }} />
+                  ))}
+                </div>
+                <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, margin: 0 }}>
+                  Tap to interrupt
+                </p>
+              </div>
+            ) : listening ? (
+              /* User is speaking */
+              <div style={{ padding: '4px 0 4px' }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  background: C.coralBg, border: `1px solid ${C.coralDim}`,
+                  borderRadius: 20, padding: '5px 12px', marginBottom: 8,
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%', background: C.coral, flexShrink: 0,
+                    animation: 'recordPulse 1.5s ease-in-out infinite',
+                  }} />
+                  <span style={{ fontFamily: SANS, fontSize: 12, color: C.coral, fontWeight: 600 }}>
+                    Listening…
+                  </span>
+                </div>
+                {input && (
+                  <p style={{
+                    fontFamily: SERIF, fontSize: 14, color: C.inkMid,
+                    margin: '0 0 8px', fontStyle: 'italic', lineHeight: 1.5,
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  }}>{input}</p>
+                )}
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <button
+                    onClick={toggleMic}
+                    style={{
+                      background: 'transparent', border: `1px solid ${C.border}`,
+                      borderRadius: 10, padding: '8px 16px',
+                      fontFamily: SANS, fontSize: 13, color: C.inkSoft,
+                    }}
+                  >✕ Cancel</button>
+                  <button
+                    onClick={send}
+                    disabled={!input.trim()}
+                    style={{
+                      background: input.trim() ? C.coral : C.coralDim,
+                      border: 'none', borderRadius: 10, padding: '8px 20px',
+                      fontFamily: SANS, fontSize: 13, fontWeight: 700, color: '#fff',
+                    }}
+                  >Send →</button>
+                </div>
+              </div>
+            ) : loading ? (
+              /* Waiting for AI */
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, margin: '8px 0', fontStyle: 'italic' }}>
+                Getting into character…
+              </p>
+            ) : (
+              /* Idle — tap to speak */
+              <button
+                onClick={toggleMic}
+                style={{
+                  background: C.bg, border: `2px solid ${C.coral}`,
+                  borderRadius: 40, padding: '12px 28px',
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.coral,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.coral} strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                  <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+                Tap to speak
+              </button>
+            )}
+          </div>
+
         ) : (
+
+          /* ── TEXT MODE INPUT (unchanged) ─────────────────────────────── */
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {/* Input with embedded mic */}
             <div style={{ position: 'relative', flex: 1 }}>
@@ -1746,6 +1949,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
               }}
             >→</button>
           </div>
+
         )}
         </div>
       </div>
@@ -2652,6 +2856,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
 // ═══════════════════════════════════════════════
 function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStart, onBack }) {
   const [difficulty, setDifficulty] = useState(initialDifficulty || scenario?.difficulty_default || 'medium')
+  const [voiceEnabled, setVoiceEnabled] = useState(true)  // default: voice conversation
 
   if (!scenario) return null
 
@@ -2754,7 +2959,38 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
         ))}
       </div>
 
-      <Btn onClick={() => onStart(scenario, difficulty)}>Start Simulation →</Btn>
+      {/* Practice mode picker */}
+      <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+        How do you want to practise?
+      </p>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {[
+          { id: true,  icon: '🎙', label: 'Voice',     desc: 'Speak & listen — most realistic' },
+          { id: false, icon: '💬', label: 'Text only', desc: 'Type — quieter environments' },
+        ].map((opt) => (
+          <button
+            key={String(opt.id)}
+            onClick={() => setVoiceEnabled(opt.id)}
+            style={{
+              flex: 1, padding: '10px 8px', borderRadius: 12,
+              border: `1.5px solid ${voiceEnabled === opt.id ? C.blue : C.border}`,
+              background: voiceEnabled === opt.id ? C.blueBg : C.surface,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              transition: 'all .15s',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>{opt.icon}</span>
+            <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: voiceEnabled === opt.id ? C.blue : C.inkSoft }}>
+              {opt.label}
+            </span>
+            <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
+              {opt.desc}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <Btn onClick={() => onStart(scenario, difficulty, voiceEnabled)}>Start Simulation →</Btn>
     </div>
   )
 }
@@ -3036,7 +3272,7 @@ export default function App() {
 
   // Start a structured scenario (from a track)
   // Also handles user-choice Daily Rep days — checks pendingDailyRepDay
-  const startScenario = (scenarioData, difficulty) => {
+  const startScenario = (scenarioData, difficulty, voiceEnabled = true) => {
     const isForDailyRep = !!pendingDailyRepDay
     setCurrentSession({
       scenario: scenarioData.id,
@@ -3048,6 +3284,7 @@ export default function App() {
       userRole: user?.role || 'all',
       isDailyRep: isForDailyRep,
       dailyRepDay: isForDailyRep ? pendingDailyRepDay.day : undefined,
+      voiceEnabled,
     })
     if (isForDailyRep) setPendingDailyRepDay(null)
     setScreen('simulation')
@@ -3303,7 +3540,7 @@ export default function App() {
           <ScenarioBriefingScreen
             scenario={activeBriefingScenario}
             initialDifficulty={pendingBriefingDifficulty}
-            onStart={(scenario, difficulty) => startScenario(scenario, difficulty)}
+            onStart={(scenario, difficulty, voiceEnabled) => startScenario(scenario, difficulty, voiceEnabled)}
             onBack={() => setScreen('track-scenarios')}
           />
         )

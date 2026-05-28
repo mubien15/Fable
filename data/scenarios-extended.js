@@ -11,6 +11,7 @@ export const EXTENDED_SCENARIOS = [
     track: 'audit',
     title: 'Regulatory Examination: The Regulator Is in the Room',
     difficulty_default: 'hard',
+    voice: 'echo',
     userRole: 'Head of Compliance or Senior GRC Manager being interviewed by a regulator',
     counterpartRole: 'Regulatory examiner — from OSFI, FCA, or equivalent. Professional, methodical, and looking for gaps. Not hostile, but does not accept vague answers.',
     context: `A regulatory examiner is conducting a supervisory review of your firm's AML and transaction monitoring framework. You have been asked to sit for a 45-minute interview. The examiner has already reviewed your documentation and has specific questions about three areas where your written policies and actual practice appear to diverge. This is not a casual conversation — your answers will be quoted in the examination report.`,
@@ -46,6 +47,7 @@ Play the regulatory examiner as follows:
   {
     id: 'audit-whistleblowing',
     track: 'audit',
+    voice: 'onyx',
     title: 'Raising an Internal Concern: The Whistleblowing Conversation',
     difficulty_default: 'hard',
     userRole: 'Senior professional who has observed something that may constitute a serious compliance breach or ethical violation',
@@ -85,6 +87,7 @@ Play the CCO as follows:
   {
     id: 'consulting-crosscultural',
     track: 'consulting',
+    voice: 'alloy',
     title: 'Cross-Cultural Communication: When Context Gets Lost',
     difficulty_default: 'medium',
     userRole: 'Senior consultant working with a client team from a different cultural background',
@@ -122,6 +125,7 @@ Play the senior client stakeholder as follows:
   {
     id: 'consulting-managing-up',
     track: 'consulting',
+    voice: 'onyx',
     title: 'Managing Up: When Your Partner Is Wrong',
     difficulty_default: 'hard',
     userRole: 'Manager or Senior Manager at a consulting firm',
@@ -162,6 +166,7 @@ Play the partner as follows:
   {
     id: 'audit-defensive-auditee',
     track: 'audit',
+    voice: 'alloy',
     title: 'Building Trust with a Defensive Auditee',
     difficulty_default: 'medium',
     userRole: 'Internal auditor or compliance reviewer conducting a review of a team member\'s work',
@@ -204,6 +209,7 @@ Play the auditee as follows:
   {
     id: 'consulting-client-bypass',
     track: 'consulting',
+    voice: 'echo',
     title: 'A Senior Client Goes Around You to Your Partner',
     difficulty_default: 'hard',
     userRole: 'Day-to-day engagement lead whose authority is being undermined by a senior client who bypasses them to go directly to the partner',
@@ -244,6 +250,7 @@ Play the partner as follows:
   {
     id: 'leadership-redundancy',
     track: 'leadership',
+    voice: 'shimmer',
     title: 'The Redundancy Conversation',
     difficulty_default: 'hard',
     userRole: 'Manager delivering a redundancy notification to a direct report',
@@ -284,6 +291,7 @@ Play the direct report as follows:
   {
     id: 'leadership-burnout',
     track: 'leadership',
+    voice: 'echo',
     title: 'Someone on Your Team Is Burning Out',
     difficulty_default: 'medium',
     userRole: 'Manager who has noticed the signs of burnout in a direct report who hasn\'t raised it themselves',
@@ -323,6 +331,7 @@ Play the direct report as follows:
   {
     id: 'leadership-promotion-denial',
     track: 'leadership',
+    voice: 'shimmer',
     title: 'Telling Someone They Didn\'t Get the Promotion',
     difficulty_default: 'hard',
     userRole: 'Manager delivering the news that a direct report was not promoted, and keeping them engaged despite the disappointment',
@@ -363,6 +372,7 @@ Play the direct report as follows:
   {
     id: 'leadership-disagreement',
     track: 'leadership',
+    voice: 'fable',
     title: 'Your Direct Report Disagrees with Your Decision',
     difficulty_default: 'medium',
     userRole: 'Manager who has made a decision and is facing persistent, genuine pushback from a direct report',
