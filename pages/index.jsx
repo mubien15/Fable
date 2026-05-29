@@ -1428,8 +1428,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   // ── Voice mode ──────────────────────────────────────────────────────────────
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
-  const audioRef          = useRef(null)
-  const triggerAutoMicRef = useRef(null)  // always-fresh ref avoids stale closure
+  const audioCtxRef       = useRef(null)   // Web Audio API context (survives re-renders)
+  const currentSourceRef  = useRef(null)   // active AudioBufferSourceNode
+  const triggerAutoMicRef = useRef(null)   // always-fresh ref avoids stale closure in onended
   // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -1465,9 +1466,36 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   }
   triggerAutoMicRef.current = triggerAutoMic  // update ref every render
 
+  // Unlock AudioContext on any user gesture — required by iOS/Safari and
+  // some Chrome autoplay policies. Safe to call multiple times.
+  const unlockAudio = () => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume()
+      }
+    } catch {}
+  }
+
+  const stopSpeaking = () => {
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.onended = null  // always suppress — either user interrupted or new speech starting
+        currentSourceRef.current.stop()
+      } catch {}
+      currentSourceRef.current = null
+    }
+    setIsPlaying(false)
+  }
+
   const speak = async (text, voice = 'onyx') => {
-    if (!voiceEnabled || !text) return
+    if (!text) return
+    // Clear any currently playing audio before starting new speech
+    stopSpeaking()
     setIsPlaying(true)
+
     try {
       const ttsText = text.length > 500 ? text.slice(0, 497) + '…' : text
       const res = await fetch('/api/speak', {
@@ -1475,47 +1503,56 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: ttsText, voice }),
       })
-      if (!res.ok) throw new Error('TTS failed')
-      const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      if (audioRef.current) {
-        audioRef.current.onended = null
-        audioRef.current.pause()
-        URL.revokeObjectURL(audioRef.current.src)
-      }
-      const audio = new Audio(url)
-      audioRef.current = audio
-      audio.onended = () => {
+      if (!res.ok) {
+        console.error('[TTS] API returned', res.status)
         setIsPlaying(false)
-        URL.revokeObjectURL(url)
-        triggerAutoMicRef.current?.()  // use ref for fresh state
+        return
       }
-      audio.onerror = () => { setIsPlaying(false) }
-      await audio.play()
-    } catch {
+
+      const arrayBuffer = await res.arrayBuffer()
+
+      // Create AudioContext lazily (must exist before decoding)
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      }
+      const ctx = audioCtxRef.current
+      // Ensure context is running (Safari suspends it without a gesture)
+      if (ctx.state === 'suspended') await ctx.resume()
+
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer)
+
+      const source = ctx.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(ctx.destination)
+      currentSourceRef.current = source
+
+      source.onended = () => {
+        if (currentSourceRef.current === source) {
+          currentSourceRef.current = null
+          setIsPlaying(false)
+          triggerAutoMicRef.current?.()  // fresh ref — sees current done/loading/voiceEnabled
+        }
+      }
+
+      source.start(0)
+    } catch (err) {
+      console.error('[TTS] speak() error:', err)
       setIsPlaying(false)
     }
   }
 
-  const stopSpeaking = () => {
-    if (audioRef.current) {
-      audioRef.current.onended = null  // prevent auto-mic when manually stopped
-      audioRef.current.pause()
-      setIsPlaying(false)
-    }
-  }
-
-  // Auto-speak the opening line when session starts (voice mode only)
+  // Auto-speak the opening line when session starts fresh (voice mode only)
   useEffect(() => {
     if (voiceEnabled && session?.scenarioData?.opening_line && !(session?.messages?.length > 0)) {
       const t = setTimeout(() => {
         speak(session.scenarioData.opening_line, session.scenarioData.voice || 'onyx')
-      }, 600)
+      }, 700)
       return () => clearTimeout(t)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleMic = () => {
+    unlockAudio()  // satisfy iOS gesture requirement for audio playback
     if (listening) {
       recRef.current?.stop()
       setListening(false)
@@ -1551,6 +1588,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
 
   const send = async () => {
+    unlockAudio()  // satisfy iOS gesture requirement — must be called synchronously on tap
     const text = input.trim()
     if (!text || loading || done) return
     stopMic()
