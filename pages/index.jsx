@@ -1489,15 +1489,16 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   // Unlock the persistent audio element on any user gesture so that iOS/Safari
   // allows future async plays. Uses a tiny silent WAV to satisfy the gesture
   // requirement without making any sound.
+  // Play a silent WAV on the element to satisfy iOS/Safari gesture requirement.
+  // We do NOT clear el.src afterwards — setting src='' queues a browser error
+  // that can fire on the next onerror handler and silently break future plays.
   const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
   const unlockAudio = () => {
     const el = audioElRef.current
     if (!el || el.dataset.unlocked) return
+    el.dataset.unlocked = '1'
     el.src = SILENT_WAV
-    el.play().then(() => {
-      el.dataset.unlocked = '1'
-      el.src = ''
-    }).catch(() => {})
+    el.play().catch(() => {})
   }
 
   const stopSpeaking = () => {
@@ -1505,8 +1506,10 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     if (el) {
       el.onended = null
       el.onerror = null
-      el.pause()
-      el.src = ''
+      // Pause only — never clear el.src here. Setting src='' queues an error
+      // event that will fire on the NEXT onerror handler we attach, aborting
+      // the second (and every subsequent) TTS play silently.
+      if (!el.paused) el.pause()
     }
     if (audioBlobUrlRef.current) {
       URL.revokeObjectURL(audioBlobUrlRef.current)
@@ -1517,7 +1520,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
   const speak = async (text, voice = 'onyx') => {
     if (!text) return
-    stopSpeaking()
+    stopSpeaking()   // clear previous handlers + revoke old blob URL
     setIsPlaying(true)
     setTtsError(null)
 
@@ -1540,7 +1543,6 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
       const blob = await res.blob()
       if (blob.size === 0) {
-        console.error('[TTS] Empty audio blob received')
         setIsPlaying(false)
         setTtsError('Empty audio response from OpenAI')
         return
@@ -1552,14 +1554,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       const el = audioElRef.current
       if (!el) { setIsPlaying(false); return }
 
-      el.src = url
+      // Attach handlers BEFORE setting src so no events are missed.
       el.onended = () => {
         URL.revokeObjectURL(url)
         audioBlobUrlRef.current = null
         el.onended = null
         el.onerror = null
         setIsPlaying(false)
-        // Return to idle — user taps "Tap to speak" when ready to respond.
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -1570,13 +1571,15 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         setIsPlaying(false)
         setTtsError('Audio playback failed — try refreshing')
       }
+      // Set src after handlers; the browser queues load events on the same tick.
+      el.src = url
 
       const playPromise = el.play()
       if (playPromise) {
         playPromise.catch((err) => {
-          console.error('[TTS] play() blocked by browser:', err.name, '—', err.message)
+          console.error('[TTS] play() blocked:', err.name)
           setIsPlaying(false)
-          setTtsError(`Playback blocked: ${err.name} — tap the mic or Send to unlock audio`)
+          setTtsError(`Playback blocked (${err.name}) — tap Send first to unlock audio`)
         })
       }
     } catch (err) {
@@ -1609,7 +1612,10 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     r.continuous = true
     r.interimResults = true
     r.lang = 'en-US'
-    finalRef.current = input
+    // Voice mode: always start fresh so old transcription never carries over.
+    // Text mode: preserve whatever is already typed.
+    finalRef.current = voiceEnabled ? '' : input
+    if (voiceEnabled) setInput('')
     r.onresult = (e) => {
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
