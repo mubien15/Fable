@@ -1428,8 +1428,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   // ── Voice mode ──────────────────────────────────────────────────────────────
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
-  const audioCtxRef       = useRef(null)   // Web Audio API context (survives re-renders)
-  const currentSourceRef  = useRef(null)   // active AudioBufferSourceNode
+  const [ttsError,  setTtsError]  = useState(false)   // show error chip on failure
+  const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
+  const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
   const triggerAutoMicRef = useRef(null)   // always-fresh ref avoids stale closure in onended
   // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
@@ -1466,35 +1467,50 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   }
   triggerAutoMicRef.current = triggerAutoMic  // update ref every render
 
-  // Unlock AudioContext on any user gesture — required by iOS/Safari and
-  // some Chrome autoplay policies. Safe to call multiple times.
+  // Create the single persistent audio element on mount.
+  // Reusing one element is required for iOS — once unlocked via a user-gesture
+  // play(), the same element can play new src values from async contexts.
+  useEffect(() => {
+    const el = new Audio()
+    el.preload = 'auto'
+    audioElRef.current = el
+    return () => { el.pause(); el.src = '' }
+  }, [])
+
+  // Unlock the persistent audio element on any user gesture so that iOS/Safari
+  // allows future async plays. Uses a tiny silent WAV to satisfy the gesture
+  // requirement without making any sound.
+  const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
   const unlockAudio = () => {
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
-      }
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume()
-      }
-    } catch {}
+    const el = audioElRef.current
+    if (!el || el.dataset.unlocked) return
+    el.src = SILENT_WAV
+    el.play().then(() => {
+      el.dataset.unlocked = '1'
+      el.src = ''
+    }).catch(() => {})
   }
 
   const stopSpeaking = () => {
-    if (currentSourceRef.current) {
-      try {
-        currentSourceRef.current.onended = null  // always suppress — either user interrupted or new speech starting
-        currentSourceRef.current.stop()
-      } catch {}
-      currentSourceRef.current = null
+    const el = audioElRef.current
+    if (el) {
+      el.onended = null
+      el.onerror = null
+      el.pause()
+      el.src = ''
+    }
+    if (audioBlobUrlRef.current) {
+      URL.revokeObjectURL(audioBlobUrlRef.current)
+      audioBlobUrlRef.current = null
     }
     setIsPlaying(false)
   }
 
   const speak = async (text, voice = 'onyx') => {
     if (!text) return
-    // Clear any currently playing audio before starting new speech
     stopSpeaking()
     setIsPlaying(true)
+    setTtsError(false)
 
     try {
       const ttsText = text.length > 500 ? text.slice(0, 497) + '…' : text
@@ -1503,41 +1519,60 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: ttsText, voice }),
       })
+
       if (!res.ok) {
-        console.error('[TTS] API returned', res.status)
+        const errText = await res.text().catch(() => res.status)
+        console.error('[TTS] API error:', errText)
         setIsPlaying(false)
+        setTtsError(true)
         return
       }
 
-      const arrayBuffer = await res.arrayBuffer()
-
-      // Create AudioContext lazily (must exist before decoding)
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      const blob = await res.blob()
+      if (blob.size === 0) {
+        console.error('[TTS] Empty audio blob received')
+        setIsPlaying(false)
+        setTtsError(true)
+        return
       }
-      const ctx = audioCtxRef.current
-      // Ensure context is running (Safari suspends it without a gesture)
-      if (ctx.state === 'suspended') await ctx.resume()
 
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer)
+      const url = URL.createObjectURL(blob)
+      audioBlobUrlRef.current = url
 
-      const source = ctx.createBufferSource()
-      source.buffer = audioBuffer
-      source.connect(ctx.destination)
-      currentSourceRef.current = source
+      const el = audioElRef.current
+      if (!el) { setIsPlaying(false); return }
 
-      source.onended = () => {
-        if (currentSourceRef.current === source) {
-          currentSourceRef.current = null
+      el.src = url
+      el.onended = () => {
+        URL.revokeObjectURL(url)
+        audioBlobUrlRef.current = null
+        el.onended = null
+        el.onerror = null
+        setIsPlaying(false)
+        triggerAutoMicRef.current?.()
+      }
+      el.onerror = (e) => {
+        console.error('[TTS] Audio element error:', e)
+        URL.revokeObjectURL(url)
+        audioBlobUrlRef.current = null
+        el.onended = null
+        el.onerror = null
+        setIsPlaying(false)
+        setTtsError(true)
+      }
+
+      const playPromise = el.play()
+      if (playPromise) {
+        playPromise.catch((err) => {
+          console.error('[TTS] play() blocked by browser:', err.name, '—', err.message)
           setIsPlaying(false)
-          triggerAutoMicRef.current?.()  // fresh ref — sees current done/loading/voiceEnabled
-        }
+          setTtsError(true)
+        })
       }
-
-      source.start(0)
     } catch (err) {
       console.error('[TTS] speak() error:', err)
       setIsPlaying(false)
+      setTtsError(true)
     }
   }
 
@@ -1552,7 +1587,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleMic = () => {
-    unlockAudio()  // satisfy iOS gesture requirement for audio playback
+    unlockAudio()  // unlock persistent audio element on iOS via user gesture
     if (listening) {
       recRef.current?.stop()
       setListening(false)
@@ -1841,6 +1876,18 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
           /* ── VOICE MODE INPUT PANEL ──────────────────────────────────── */
           <div style={{ textAlign: 'center' }}>
+
+            {/* TTS error chip — shown if audio playback failed */}
+            {ttsError && !isPlaying && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 20,
+                padding: '4px 12px', marginBottom: 8,
+                fontFamily: SANS, fontSize: 11, color: '#B91C1C',
+              }}>
+                🔇 Voice unavailable — check OPENAI_API_KEY in Vercel
+              </div>
+            )}
 
             {isPlaying ? (
               /* AI is speaking */
