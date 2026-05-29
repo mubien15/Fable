@@ -1600,22 +1600,31 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleMic = () => {
-    unlockAudio()  // unlock persistent audio element on iOS via user gesture
+    unlockAudio()
     if (listening) {
       recRef.current?.stop()
+      recRef.current = null
       setListening(false)
       return
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
+
+    // Stop any lingering previous recognition before starting a new one.
+    // Its onend will fire after we've already moved on — the guard below
+    // (recRef.current === r) ensures it can't set listening=false on the
+    // new instance.
+    recRef.current?.stop()
+
+    // Voice mode: always start fresh. Text mode: preserve existing text.
+    finalRef.current = voiceEnabled ? '' : input
+    if (voiceEnabled) setInput('')
+
     const r = new SR()
     r.continuous = true
     r.interimResults = true
     r.lang = 'en-US'
-    // Voice mode: always start fresh so old transcription never carries over.
-    // Text mode: preserve whatever is already typed.
-    finalRef.current = voiceEnabled ? '' : input
-    if (voiceEnabled) setInput('')
+
     r.onresult = (e) => {
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -1624,8 +1633,17 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       }
       setInput(finalRef.current + interim)
     }
-    r.onerror = () => setListening(false)
-    r.onend = () => setListening(false)
+    // Guard: only change state if THIS recognition is still the current one.
+    // A stale onend/onerror from a previous instance must not kill the new
+    // recording — that was the root cause of the second-turn failure.
+    r.onerror = (e) => {
+      if (e.error !== 'no-speech') console.warn('[STT] error:', e.error)
+      if (recRef.current === r) { recRef.current = null; setListening(false) }
+    }
+    r.onend = () => {
+      if (recRef.current === r) { recRef.current = null; setListening(false) }
+    }
+
     r.start()
     recRef.current = r
     setListening(true)
@@ -1633,7 +1651,12 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
   // Stop mic when message is sent
   const stopMic = () => {
-    if (listening) { recRef.current?.stop(); setListening(false) }
+    if (listening) {
+      const prev = recRef.current
+      recRef.current = null   // clear ref first so onend guard fires false
+      prev?.stop()
+      setListening(false)
+    }
   }
 
   const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
