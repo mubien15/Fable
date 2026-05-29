@@ -1451,7 +1451,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     r.lang = 'en-US'
     finalRef.current = ''
     setInput('')
+    let gotSpeech = false
     r.onresult = (e) => {
+      gotSpeech = true
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
@@ -1459,8 +1461,20 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       }
       setInput(finalRef.current + interim)
     }
-    r.onerror = () => setListening(false)
-    r.onend   = () => setListening(false)
+    r.onerror = (e) => {
+      // 'no-speech' is normal — browser timed out waiting. Don't show error.
+      if (e.error !== 'no-speech') console.warn('[STT] error:', e.error)
+      setListening(false)
+    }
+    r.onend = () => {
+      setListening(false)
+      // If recognition stopped without capturing any speech AND we're still in
+      // voice mode and the AI isn't speaking, restart it once so the user
+      // doesn't have to tap manually after a brief pause.
+      if (!gotSpeech) {
+        setTimeout(() => triggerAutoMicRef.current?.(), 300)
+      }
+    }
     r.start()
     recRef.current = r
     setListening(true)
@@ -1550,7 +1564,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         el.onended = null
         el.onerror = null
         setIsPlaying(false)
-        triggerAutoMicRef.current?.()
+        // Delay before starting mic — browser needs ~400ms to release the
+        // audio output device before the microphone can capture cleanly.
+        setTimeout(() => triggerAutoMicRef.current?.(), 450)
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
