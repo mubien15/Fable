@@ -1559,9 +1559,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         el.onended = null
         el.onerror = null
         setIsPlaying(false)
-        // Delay before starting mic — browser needs ~400ms to release the
-        // audio output device before the microphone can capture cleanly.
-        setTimeout(() => triggerAutoMicRef.current?.(), 450)
+        // Return to idle — user taps "Tap to speak" when ready to respond.
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
