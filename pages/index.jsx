@@ -1485,12 +1485,23 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
   const speak = async (text, voice = 'onyx') => {
     if (!text) return
-    stopSpeaking()   // clear previous handlers + revoke old blob URL
+
+    // Strip roleplay action cues before sending to TTS — they sound wrong
+    // when read aloud (*sighs*, *looks confused*, [frustrated], etc.).
+    // The full text (with cues) is still shown in the chat bubble.
+    const spoken = text
+      .replace(/\*[^*\n]+\*/g, '')   // *action cues*
+      .replace(/\[[^\]\n]+\]/g, '')  // [action cues]
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+    if (!spoken) return  // nothing left to say after stripping
+
+    stopSpeaking()
     setIsPlaying(true)
     setTtsError(null)
 
     try {
-      const ttsText = text.length > 500 ? text.slice(0, 497) + '…' : text
+      const ttsText = spoken.length > 500 ? spoken.slice(0, 497) + '…' : spoken
       const res = await fetch('/api/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
