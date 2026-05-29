@@ -9,6 +9,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No text provided' })
   }
 
+  // Check key is configured at all
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: 'OPENAI_API_KEY is not set in Vercel environment variables' })
+  }
+
   // Cap at 500 chars for spoken version — full text still shown in chat
   const ttsText = text.length > 500 ? text.slice(0, 497) + '…' : text
 
@@ -29,8 +34,14 @@ export default async function handler(req, res) {
     })
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
-      return res.status(500).json({ error: err.message || 'TTS request failed' })
+      // Forward the actual OpenAI error message so the client can display it
+      let openAIError = `OpenAI returned status ${response.status}`
+      try {
+        const errBody = await response.json()
+        openAIError = errBody?.error?.message || openAIError
+      } catch {}
+      console.error('[speak] OpenAI error:', response.status, openAIError)
+      return res.status(502).json({ error: openAIError })
     }
 
     const audioBuffer = await response.arrayBuffer()
@@ -39,7 +50,7 @@ export default async function handler(req, res) {
     res.send(Buffer.from(audioBuffer))
 
   } catch (error) {
-    console.error('[speak] TTS error:', error?.message || error)
-    res.status(500).json({ error: 'Failed to generate speech' })
+    console.error('[speak] fetch error:', error?.message || error)
+    res.status(500).json({ error: error?.message || 'Failed to reach OpenAI' })
   }
 }

@@ -1428,7 +1428,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   // ── Voice mode ──────────────────────────────────────────────────────────────
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [ttsError,  setTtsError]  = useState(false)   // show error chip on failure
+  const [ttsError,  setTtsError]  = useState(null)   // null = ok, string = error message to show
   const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
   const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
   const triggerAutoMicRef = useRef(null)   // always-fresh ref avoids stale closure in onended
@@ -1510,7 +1510,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     if (!text) return
     stopSpeaking()
     setIsPlaying(true)
-    setTtsError(false)
+    setTtsError(null)
 
     try {
       const ttsText = text.length > 500 ? text.slice(0, 497) + '…' : text
@@ -1521,10 +1521,11 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       })
 
       if (!res.ok) {
-        const errText = await res.text().catch(() => res.status)
-        console.error('[TTS] API error:', errText)
+        let msg = `API error ${res.status}`
+        try { const j = await res.json(); msg = j.error || msg } catch {}
+        console.error('[TTS] API error:', msg)
         setIsPlaying(false)
-        setTtsError(true)
+        setTtsError(msg)
         return
       }
 
@@ -1532,7 +1533,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       if (blob.size === 0) {
         console.error('[TTS] Empty audio blob received')
         setIsPlaying(false)
-        setTtsError(true)
+        setTtsError('Empty audio response from OpenAI')
         return
       }
 
@@ -1558,7 +1559,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         el.onended = null
         el.onerror = null
         setIsPlaying(false)
-        setTtsError(true)
+        setTtsError('Audio playback failed — try refreshing')
       }
 
       const playPromise = el.play()
@@ -1566,13 +1567,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         playPromise.catch((err) => {
           console.error('[TTS] play() blocked by browser:', err.name, '—', err.message)
           setIsPlaying(false)
-          setTtsError(true)
+          setTtsError(`Playback blocked: ${err.name} — tap the mic or Send to unlock audio`)
         })
       }
     } catch (err) {
       console.error('[TTS] speak() error:', err)
       setIsPlaying(false)
-      setTtsError(true)
+      setTtsError(err?.message || 'Unexpected TTS error')
     }
   }
 
@@ -1877,15 +1878,16 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           /* ── VOICE MODE INPUT PANEL ──────────────────────────────────── */
           <div style={{ textAlign: 'center' }}>
 
-            {/* TTS error chip — shown if audio playback failed */}
+            {/* TTS error chip — shows exact error message from OpenAI or browser */}
             {ttsError && !isPlaying && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 20,
                 padding: '4px 12px', marginBottom: 8,
                 fontFamily: SANS, fontSize: 11, color: '#B91C1C',
+                maxWidth: 320, textAlign: 'left', lineHeight: 1.4,
               }}>
-                🔇 Voice unavailable — check OPENAI_API_KEY in Vercel
+                🔇 {ttsError}
               </div>
             )}
 
