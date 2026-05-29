@@ -1438,43 +1438,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const recRef = useRef(null)
   const finalRef = useRef('')
 
-  // Keep triggerAutoMicRef fresh on every render so audio.onended always sees
-  // the latest done / loading / voiceEnabled state.
-  const triggerAutoMic = () => {
-    if (done || loading || !voiceEnabled) return
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return
-    recRef.current?.stop()
-    const r = new SR()
-    r.continuous = true
-    r.interimResults = true
-    r.lang = 'en-US'
-    finalRef.current = ''
-    setInput('')
-    r.onresult = (e) => {
-      let interim = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
-        else interim += e.results[i][0].transcript
-      }
-      setInput(finalRef.current + interim)
-    }
-    r.onerror = (e) => {
-      // 'no-speech' is normal — browser timed out waiting. Don't show error.
-      if (e.error !== 'no-speech') console.warn('[STT] error:', e.error)
-      setListening(false)
-    }
-    r.onend = () => {
-      // Just stop — show "Tap to speak" so the user can speak when ready.
-      // (Auto-restarting here caused an infinite loop on Safari/Chrome when
-      // no speech was detected, so we let the user tap intentionally.)
-      setListening(false)
-    }
-    r.start()
-    recRef.current = r
-    setListening(true)
-  }
-  triggerAutoMicRef.current = triggerAutoMic  // update ref every render
+  // triggerAutoMicRef kept for structural consistency but no longer called
+  triggerAutoMicRef.current = null
 
   // Create the single persistent audio element on mount.
   // Reusing one element is required for iOS — once unlocked via a user-gesture
@@ -1599,64 +1564,102 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Speech recognition ─────────────────────────────────────────────────────
+  // We use continuous:false (one utterance at a time) because Chrome has a
+  // known bug where continuous:true silently stops producing results on the
+  // 2nd+ instance. We manage continuity ourselves via launchRecognition().
+  const wantListeningRef = useRef(false)  // true while user wants mic active
+
+  const launchRecognition = () => {
+    if (!wantListeningRef.current) return   // user cancelled before we got here
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+
+    // Abort any lingering instance first
+    try { recRef.current?.abort() } catch {}
+    recRef.current = null
+
+    const r = new SR()
+    r.continuous     = false  // one utterance; we restart manually if needed
+    r.interimResults = true
+    r.lang           = 'en-US'
+
+    r.onresult = (e) => {
+      if (recRef.current !== r) return
+      let finalText = '', interim = ''
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' '
+        else interim += e.results[i][0].transcript
+      }
+      if (finalText) finalRef.current += finalText
+      setInput((finalRef.current + interim).trim())
+    }
+
+    r.onerror = (e) => {
+      if (recRef.current !== r) return
+      recRef.current = null
+      if (e.error === 'no-speech') {
+        // Browser timed out waiting — restart silently if we still want to listen
+        if (wantListeningRef.current && !finalRef.current.trim()) {
+          setTimeout(launchRecognition, 100)
+        }
+        // If we already have speech, keep UI as-is so user can tap Send
+      } else {
+        console.warn('[STT] error:', e.error)
+        wantListeningRef.current = false
+        setListening(false)
+      }
+    }
+
+    r.onend = () => {
+      if (recRef.current !== r) return
+      recRef.current = null
+      if (!wantListeningRef.current) return  // user cancelled — do nothing
+      if (!finalRef.current.trim()) {
+        // No speech captured yet — restart to keep waiting
+        setTimeout(launchRecognition, 100)
+      }
+      // If we have speech, stay in listening UI so user can tap Send →
+    }
+
+    try {
+      r.start()
+      recRef.current = r
+    } catch (e) {
+      console.error('[STT] start() threw:', e.message)
+      wantListeningRef.current = false
+      setListening(false)
+    }
+  }
+
   const toggleMic = () => {
     unlockAudio()
     if (listening) {
-      recRef.current?.stop()
+      // User tapping to cancel
+      wantListeningRef.current = false
+      try { recRef.current?.abort() } catch {}
       recRef.current = null
+      finalRef.current = ''
+      setInput('')
       setListening(false)
       return
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
 
-    // Stop any lingering previous recognition before starting a new one.
-    // Its onend will fire after we've already moved on — the guard below
-    // (recRef.current === r) ensures it can't set listening=false on the
-    // new instance.
-    recRef.current?.stop()
-
-    // Voice mode: always start fresh. Text mode: preserve existing text.
-    finalRef.current = voiceEnabled ? '' : input
-    if (voiceEnabled) setInput('')
-
-    const r = new SR()
-    r.continuous = true
-    r.interimResults = true
-    r.lang = 'en-US'
-
-    r.onresult = (e) => {
-      let interim = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
-        else interim += e.results[i][0].transcript
-      }
-      setInput(finalRef.current + interim)
-    }
-    // Guard: only change state if THIS recognition is still the current one.
-    // A stale onend/onerror from a previous instance must not kill the new
-    // recording — that was the root cause of the second-turn failure.
-    r.onerror = (e) => {
-      if (e.error !== 'no-speech') console.warn('[STT] error:', e.error)
-      if (recRef.current === r) { recRef.current = null; setListening(false) }
-    }
-    r.onend = () => {
-      if (recRef.current === r) { recRef.current = null; setListening(false) }
-    }
-
-    r.start()
-    recRef.current = r
+    finalRef.current = ''
+    setInput('')
+    wantListeningRef.current = true
     setListening(true)
+    launchRecognition()
   }
 
-  // Stop mic when message is sent
+  // Stop mic when message is sent (does not clear input — send() reads it first)
   const stopMic = () => {
-    if (listening) {
-      const prev = recRef.current
-      recRef.current = null   // clear ref first so onend guard fires false
-      prev?.stop()
-      setListening(false)
-    }
+    wantListeningRef.current = false
+    try { recRef.current?.abort() } catch {}
+    recRef.current = null
+    setListening(false)
   }
 
   const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
