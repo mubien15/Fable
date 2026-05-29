@@ -1,9 +1,12 @@
+const VALID_VOICES = new Set(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'])
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { text, voice = 'onyx' } = req.body
+  const { text, voice: rawVoice = 'onyx' } = req.body
+  const voice = VALID_VOICES.has(rawVoice) ? rawVoice : 'onyx'
 
   if (!text) {
     return res.status(400).json({ error: 'No text provided' })

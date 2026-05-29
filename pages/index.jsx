@@ -29,6 +29,8 @@ const C = {
 }
 const SERIF = "'Lora', Georgia, serif"
 const SANS = "'DM Sans', system-ui, -apple-system, sans-serif"
+// Tiny silent WAV used to unlock the audio element on iOS/Safari (user gesture requirement)
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
 
 // ═══════════════════════════════════════════════
 // DATA
@@ -212,6 +214,7 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
       onChange(finalRef.current + interim)
     }
     r.onerror = () => setListening(false)
+    r.onend   = () => setListening(false)
     r.start()
     recRef.current = r
     setListening(true)
@@ -469,7 +472,7 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════
-const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface }
+const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface, career: C.surface }
 
 function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay }) {
   const greeting = (() => {
@@ -1431,15 +1434,12 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const [ttsError,  setTtsError]  = useState(null)   // null = ok, string = error message to show
   const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
   const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
-  const triggerAutoMicRef = useRef(null)   // always-fresh ref avoids stale closure in onended
   // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
   const recRef = useRef(null)
   const finalRef = useRef('')
 
-  // triggerAutoMicRef kept for structural consistency but no longer called
-  triggerAutoMicRef.current = null
 
   // Create the single persistent audio element on mount.
   // Reusing one element is required for iOS — once unlocked via a user-gesture
@@ -1451,13 +1451,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     return () => { el.pause(); el.src = '' }
   }, [])
 
-  // Unlock the persistent audio element on any user gesture so that iOS/Safari
-  // allows future async plays. Uses a tiny silent WAV to satisfy the gesture
-  // requirement without making any sound.
-  // Play a silent WAV on the element to satisfy iOS/Safari gesture requirement.
-  // We do NOT clear el.src afterwards — setting src='' queues a browser error
-  // that can fire on the next onerror handler and silently break future plays.
-  const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+  // Play a silent WAV on the element once per session to satisfy iOS/Safari's
+  // requirement that audio playback be triggered by a user gesture.
   const unlockAudio = () => {
     const el = audioElRef.current
     if (!el || el.dataset.unlocked) return
@@ -1711,7 +1706,6 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           sessionHistory: history.slice(0, -1),
           difficulty: session?.difficulty || 'medium',
           userRole: session?.userRole || 'all',
-          voiceMode: voiceEnabled,
         }),
       })
       const data = await res.json()
