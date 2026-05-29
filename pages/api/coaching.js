@@ -91,8 +91,8 @@ export default async function handler(req, res) {
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: voiceMode ? 150 : 600,
-        system: buildScenarioPrompt(scenario, difficulty, userRole, voiceMode),
+        max_tokens: 600,
+        system: buildScenarioPrompt(scenario, difficulty, userRole),
         messages: history,
       })
 
