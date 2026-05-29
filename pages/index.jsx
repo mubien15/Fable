@@ -195,7 +195,7 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
       return
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input requires Chrome or Safari 17+.'); return }
+    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
 
     const r = new SR()
     r.continuous = true
@@ -910,7 +910,7 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
   const toggleMic = () => {
     if (listening) { recRef.current?.stop(); setListening(false); return }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input requires Chrome or Safari 17+.'); return }
+    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
     const r = new SR()
     r.continuous = true; r.interimResults = true; r.lang = 'en-US'
     finalRef.current = input
@@ -1451,9 +1451,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     r.lang = 'en-US'
     finalRef.current = ''
     setInput('')
-    let gotSpeech = false
     r.onresult = (e) => {
-      gotSpeech = true
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
@@ -1467,13 +1465,10 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       setListening(false)
     }
     r.onend = () => {
+      // Just stop — show "Tap to speak" so the user can speak when ready.
+      // (Auto-restarting here caused an infinite loop on Safari/Chrome when
+      // no speech was detected, so we let the user tap intentionally.)
       setListening(false)
-      // If recognition stopped without capturing any speech AND we're still in
-      // voice mode and the AI isn't speaking, restart it once so the user
-      // doesn't have to tap manually after a brief pause.
-      if (!gotSpeech) {
-        setTimeout(() => triggerAutoMicRef.current?.(), 300)
-      }
     }
     r.start()
     recRef.current = r
@@ -1611,7 +1606,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       return
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input requires Chrome or Safari 17+.'); return }
+    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
     const r = new SR()
     r.continuous = true
     r.interimResults = true
