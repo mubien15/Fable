@@ -9,9 +9,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No text provided' })
   }
 
-  // Check key is configured at all
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: 'OPENAI_API_KEY is not set in Vercel environment variables' })
+  // Check key is configured at all (variable is named OpenAI_Voice in Vercel)
+  const openAIKey = process.env.OpenAI_Voice || process.env.OPENAI_API_KEY
+  if (!openAIKey) {
+    return res.status(500).json({ error: 'OpenAI API key is not set in Vercel environment variables' })
   }
 
   // Cap at 500 chars for spoken version — full text still shown in chat
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${openAIKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
