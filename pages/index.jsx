@@ -1711,6 +1711,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           sessionHistory: history.slice(0, -1),
           difficulty: session?.difficulty || 'medium',
           userRole: session?.userRole || 'all',
+          voiceMode: voiceEnabled,
         }),
       })
       const data = await res.json()

@@ -32,6 +32,7 @@ export default async function handler(req, res) {
     userName,
     userRole = 'all', // auditor | consultant | manager | all
     difficulty = 'medium',
+    voiceMode = false,  // true when user is in voice conversation mode
   } = req.body
 
   try {
@@ -90,8 +91,8 @@ export default async function handler(req, res) {
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 600,
-        system: buildScenarioPrompt(scenario, difficulty, userRole),
+        max_tokens: voiceMode ? 150 : 600,
+        system: buildScenarioPrompt(scenario, difficulty, userRole, voiceMode),
         messages: history,
       })
 
