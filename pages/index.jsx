@@ -1524,8 +1524,14 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         URL.revokeObjectURL(url)
         audioBlobUrlRef.current = null
         el.onended = null
-        el.onerror = null
+        el.onerror = null   // cleared before src change — harmless error below
         setIsPlaying(false)
+        // Release the audio session so Safari/iOS frees the audio device.
+        // The empty-src error fires on the now-null onerror → no harm.
+        // Without this, iOS holds the audio session in "playback" mode and
+        // the microphone cannot acquire it on the next turn.
+        el.src = ''
+        el.load()
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -1576,7 +1582,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     if (!SR) return
 
     // Abort any lingering instance first
-    try { recRef.current?.abort() } catch {}
+    try { recRef.current?.stop() } catch {}
     recRef.current = null
 
     const r = new SR()
@@ -1637,8 +1643,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     if (listening) {
       // User tapping to cancel
       wantListeningRef.current = false
-      try { recRef.current?.abort() } catch {}
+      const prev = recRef.current
       recRef.current = null
+      try { prev?.stop() } catch {}
       finalRef.current = ''
       setInput('')
       setListening(false)
@@ -1657,8 +1664,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   // Stop mic when message is sent (does not clear input — send() reads it first)
   const stopMic = () => {
     wantListeningRef.current = false
-    try { recRef.current?.abort() } catch {}
-    recRef.current = null
+    const prev = recRef.current
+    recRef.current = null     // clear first so stale onend/onerror are no-ops
+    try { prev?.stop() } catch {}
     setListening(false)
   }
 
