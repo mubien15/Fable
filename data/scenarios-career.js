@@ -24,7 +24,7 @@ export const CAREER_SCENARIOS = [
       'Backing down the moment "budget constraints" is mentioned — that\'s the first move, not the final answer',
       'Accepting a timing delay ("next review cycle") without getting it in writing with a specific date',
     ],
-    opening_line: "Thanks for making time. I wanted to have a direct conversation about my compensation — I think the timing is right and I have some specific things I'd like to discuss.",
+    opening_line: "Come in, take a seat. You said you wanted to talk — I've cleared some time. What's on your mind?",
     coaching_focus: [
       'Anchoring with a specific number — not a range, not "something more"',
       'Grounding the ask in evidence — contribution, market rate, additional responsibilities',
@@ -65,7 +65,7 @@ Play the manager/HR partner as follows:
       'Focusing on how long you\'ve been in the role instead of the evidence of what you\'ve delivered',
       'Accepting "the timing isn\'t right" without asking what the right timing would actually look like',
     ],
-    opening_line: "Thanks for making time. I wanted to have a direct conversation about my progression — I think I've been performing at the next level for a while now, and I'd like to talk about what a promotion path looks like.",
+    opening_line: "Hey — come in. You said you wanted some time to talk about something. What's on your mind?",
     coaching_focus: [
       'Making a clear, specific ask — not hinting or framing it as a question',
       'Leading with evidence of impact, not tenure or effort',
@@ -104,7 +104,7 @@ Play the manager as follows:
       'Letting "calibration" and "the process" close the conversation — ask what the calibration actually considered',
       'Becoming emotional or letting frustration bleed into the tone — it gives the manager a reason to stop engaging with the substance',
     ],
-    opening_line: "Thanks for making time. I've thought carefully about the review and I'd like to talk through the rating specifically — I want to understand the reasoning, and I'd like to share my perspective on some things I don't think were fully reflected.",
+    opening_line: "Thanks for coming back in. I figured you might want to talk after seeing the rating. Go ahead — what did you want to raise?",
     coaching_focus: [
       'Opening with curiosity before challenge — "help me understand" before "I disagree"',
       'Using specific evidence, not feelings — name the project, the outcome, the feedback',
@@ -143,7 +143,7 @@ Play the manager as follows:
       'Being so diplomatic the message doesn\'t land — your manager needs to understand they are the blocker',
       'Leaving without a concrete change to how decisions get made — a sympathetic nod is not enough',
     ],
-    opening_line: "I wanted to have a direct conversation about how the project is going — there are a few things I need your input on and I want to make sure we find a way to keep things moving. Can we spend a few minutes on that?",
+    opening_line: "Hey — you wanted a quick word? I've got about fifteen minutes between calls. What's up?",
     coaching_focus: [
       'Describing the impact of the delay before naming the cause — start with the problem, not the blame',
       'Being specific: name the three decisions, the timeline impact, the team cost',
@@ -182,7 +182,7 @@ Play the senior manager as follows:
       'Accepting warm enthusiasm without a concrete next step — "That\'s great, I\'ll support you" is not a commitment',
       'Not addressing your manager\'s concern about losing you from the team — acknowledge it directly',
     ],
-    opening_line: "I wanted to have an honest conversation about my career direction. I've been thinking carefully about where I want to go, and I want to be direct with you about it rather than you hearing it later through other channels.",
+    opening_line: "Good to see you — grab a seat. You said you wanted to talk about something. What's going on?",
     coaching_focus: [
       'Being specific about the direction — name the role, function, or team you are targeting',
       'Making the ask concrete — an introduction, a project, a timeline',
@@ -221,7 +221,7 @@ Play the manager as follows:
       'Giving a long explanation of why you\'re busy — one clear reason is enough; too many sounds defensive',
       'Caving when they say it\'s "just a quick thing" — this is the test moment',
     ],
-    opening_line: "I wanted to talk to you about the request you just sent through — I want to be upfront with you rather than just saying yes and then not delivering well.",
+    opening_line: "Did you see my message? I need someone on this today — it's time-sensitive and you're the right person for it.",
     coaching_focus: [
       'Stating the boundary clearly before explaining it — not burying it in caveats',
       'Offering a specific alternative where possible — a later date, a reduced scope, a different resource',
@@ -300,7 +300,7 @@ Play the HR representative and manager as follows:
       'Accepting vague reassurances ("things will settle down") — ask for a specific timeline and plan',
       'Being so careful not to seem demanding that you leave without anything concrete agreed',
     ],
-    opening_line: "I wanted to use this 1:1 to talk about my re-entry properly — I've been back a week and I want to make sure we're aligned on how my role looks from here.",
+    opening_line: "Really good to have you back — proper first 1:1. How are you finding it so far? Settling back in okay?",
     coaching_focus: [
       'Being specific about what hasn\'t been handed back and why it matters',
       'Proposing a clear re-entry plan rather than waiting for one to emerge',

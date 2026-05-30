@@ -62,7 +62,7 @@ Play the regulatory examiner as follows:
       'Becoming emotional or defensive when the CCO tests your credibility',
       'Understating the seriousness to soften the discomfort of the conversation',
     ],
-    opening_line: "Thank you for seeing me. I want to be clear from the start — I'm not here with a conclusion. I'm here because I've observed something I think you need to know about, and I want to present it factually and let you make the assessment.",
+    opening_line: "Close the door. I've cleared thirty minutes — you said this was sensitive and needed to be in person. I'm listening. What have you observed?",
     coaching_focus: [
       'Separating observation from interpretation — "I observed X" not "I believe X was fraud"',
       'Being specific about dates, transactions, and patterns without overstating certainty',
@@ -102,7 +102,7 @@ Play the CCO as follows:
       'Missing the indirect signal when it does surface — it will be subtle',
       'Pushing for Western-style directness instead of adapting your communication approach',
     ],
-    opening_line: "Thank you for making time today. I wanted to check in personally — I find these conversations more useful than email for understanding how things are really going from your perspective.",
+    opening_line: "Thank you for coming. Please, sit. We appreciate you taking the time to visit us — it is good to meet properly.",
     coaching_focus: [
       'Creating space for indirect communication rather than demanding directness',
       'Reading silence, deflection, and over-politeness as information',
@@ -140,7 +140,7 @@ Play the senior client stakeholder as follows:
       'Raising general discomfort instead of pointing to the specific evidence gap',
       'Accepting "market benchmarks" as justification without asking to actually see them',
     ],
-    opening_line: "Before the prep call — I want to flag something I've been thinking about since reviewing the final deck last night. I want to make sure I'm not missing something before I raise it.",
+    opening_line: "Good — we've got ten minutes before the call. Anything I should know before we dial in?",
     coaching_focus: [
       'Opening with curiosity before conclusion — "I want to make sure I\'m not missing something"',
       'Being specific about the evidence gap, not just expressing general discomfort',
@@ -181,7 +181,7 @@ Play the partner as follows:
       'Being so formal that you reinforce the adversarial dynamic you\'re trying to break',
       'Missing the moment to land the key reframe: you finding it now is better than the regulator finding it later',
     ],
-    opening_line: "Thanks for making time for this. Before we get into the specifics, I just want to say — I know these reviews can feel uncomfortable, and I want to be upfront about how I approach them.",
+    opening_line: "Right. I've got an hour blocked. I've pulled everything you asked for — it's all here. What do you need from me?",
     coaching_focus: [
       'Landing the key reframe early: finding it now is better than the regulator finding it later',
       'Creating psychological safety before asking for sensitive information',
@@ -224,7 +224,7 @@ Play the auditee as follows:
       'Letting your partner dismiss it as harmless without landing why the structure matters for delivery quality',
       'Going to the client before aligning with your partner — it will backfire',
     ],
-    opening_line: "I wanted to pick up on something you mentioned — about [client name] reaching out to you directly. I think it's worth us aligning on how we want to handle that going forward.",
+    opening_line: "Oh — good timing, I was going to catch you. The client reached out to me directly again. Bit of an odd one. Anyway — you wanted to talk about something?",
     coaching_focus: [
       'Framing the problem in terms of engagement risk, not personal authority — this lands better with a senior colleague',
       'Proposing a specific solution rather than just naming the problem',
