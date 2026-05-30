@@ -1446,7 +1446,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const [ttsError,  setTtsError]  = useState(null)   // null = ok, string = error message to show
   const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
   const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
-  const autoRestartMicRef = useRef(false)  // set true by speak().onended to trigger mic restart
+  const autoRestartMicRef = useRef(false)  // unused — kept to avoid ref churn
   // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -1551,8 +1551,6 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         // the microphone cannot acquire it on the next turn.
         el.src = ''
         el.load()
-        // Signal the mic auto-restart effect — checked against voiceEnabled/done state there
-        autoRestartMicRef.current = true
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -1591,22 +1589,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-restart mic after AI finishes speaking (voice mode only)
-  // 400ms delay lets iOS/Safari release the audio device before mic acquires it
-  useEffect(() => {
-    if (!isPlaying && autoRestartMicRef.current && voiceEnabled && !done && !loading) {
-      autoRestartMicRef.current = false
-      const t = setTimeout(() => {
-        if (wantListeningRef.current) return  // already listening
-        finalRef.current = ''
-        setInput('')
-        wantListeningRef.current = true
-        setListening(true)
-        launchRecognition()
-      }, 400)
-      return () => clearTimeout(t)
-    }
-  }, [isPlaying]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: mic is fully manual — user taps "Tap to speak" after AI finishes.
+  // No auto-restart: the idle "Tap to speak" button is shown as soon as isPlaying → false.
 
   // ── Speech recognition ─────────────────────────────────────────────────────
   // We use continuous:false (one utterance at a time) because Chrome has a
