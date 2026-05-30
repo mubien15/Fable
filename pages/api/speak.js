@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         input: ttsText,
         voice,
         response_format: 'mp3',
-        speed: 1.0,
+        speed: 1.1,  // slightly brisker than default — more natural, less robotic
       }),
     })
 

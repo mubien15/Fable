@@ -1531,9 +1531,6 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [ttsError,  setTtsError]  = useState(null)   // null = ok, string = error message to show
-  // After TTS ends, iOS needs ~350ms to release the audio session before the mic can acquire it.
-  // readyToSpeak prevents the "Tap to speak" button appearing until iOS is ready.
-  const [readyToSpeak, setReadyToSpeak] = useState(true)
   // Opening line needs a user-gesture tap on iOS before audio can play.
   // If voice is on and there's an opening line, show a "Tap to begin" button first.
   const hasOpeningLine = !!(voiceEnabled && session?.scenarioData?.opening_line && !(session?.messages?.length > 0))
@@ -1585,8 +1582,6 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       if (releaseForMic) {
         // Release audio session so iOS can switch to record mode for the mic.
         el.src = ''
-        setReadyToSpeak(false)
-        setTimeout(() => setReadyToSpeak(true), 650)
       }
     }
     if (audioBlobUrlRef.current) {
@@ -1655,10 +1650,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         // the element and keeps the session alive longer.
         // The empty-src error fires on the now-null onerror → no harm.
         el.src = ''
-        // Gate "Tap to speak" for 650ms while iOS completes the audio session
-        // switch from playback → record. 350ms proved insufficient on some devices.
-        setReadyToSpeak(false)
-        setTimeout(() => setReadyToSpeak(true), 650)
+        // No mic-handoff delay needed: MediaRecorder (unlike Web Speech API) works
+        // immediately after playback, so "Tap to speak" appears instantly.
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -2213,11 +2206,6 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
               >
                 ▶ Tap to hear the opening
               </button>
-            ) : !readyToSpeak ? (
-              /* iOS releasing audio session after TTS — brief pause before mic is available */
-              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, margin: '8px 0' }}>
-                …
-              </p>
             ) : (
               /* Idle — tap to speak */
               <button
