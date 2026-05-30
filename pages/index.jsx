@@ -310,13 +310,67 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
   )
 }
 
+// Cohesive line-icon set for the bottom nav. All stroke = currentColor so they
+// tint coral when active / faint when inactive, exactly like the old glyphs did.
+function NavIcon({ id, color }) {
+  const common = {
+    width: 23, height: 23, viewBox: '0 0 24 24', fill: 'none',
+    stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round',
+  }
+  switch (id) {
+    case 'home':
+      return (
+        <svg {...common}>
+          <path d="M3.5 11.5 12 4l8.5 7.5" />
+          <path d="M5.5 10v9.5h13V10" />
+        </svg>
+      )
+    case 'scenarios':
+      return (
+        <svg {...common}>
+          <rect x="3.5"  y="3.5"  width="7" height="7" rx="1.6" />
+          <rect x="13.5" y="3.5"  width="7" height="7" rx="1.6" />
+          <rect x="3.5"  y="13.5" width="7" height="7" rx="1.6" />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="1.6" />
+        </svg>
+      )
+    case 'rehearse':
+      // A sparkle — signals the personalised / custom-built moment.
+      return (
+        <svg {...common}>
+          <path d="M12 3c.45 4 1.55 5.1 5.5 5.5-3.95.4-5.05 1.5-5.5 5.5-.45-4-1.55-5.1-5.5-5.5C9.45 8.1 10.55 7 12 3Z" />
+          <path d="M18.5 15c.2 1.6.75 2.15 2.3 2.35-1.55.2-2.1.75-2.3 2.35-.2-1.6-.75-2.15-2.3-2.35 1.55-.2 2.1-.75 2.3-2.35Z" />
+        </svg>
+      )
+    case 'coach':
+      // Speech bubble — conversation / guidance.
+      return (
+        <svg {...common}>
+          <path d="M20 13.5a2 2 0 0 1-2 2H9l-4 3.5V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2Z" />
+        </svg>
+      )
+    case 'progress':
+      // Bar chart — growth over time.
+      return (
+        <svg {...common}>
+          <path d="M4 20h16" />
+          <path d="M7.5 20v-5" />
+          <path d="M12 20V8.5" />
+          <path d="M16.5 20v-8" />
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
 function BottomNav({ active, onChange }) {
   const tabs = [
-    { id: 'home',      icon: '⌂',  label: 'Home'      },
-    { id: 'scenarios', icon: '⊞',  label: 'Scenarios' },
-    { id: 'rehearse',  icon: '🎭', label: 'Rehearse'  },
-    { id: 'coach',     icon: '◎',  label: 'Coach'     },
-    { id: 'progress',  icon: '◈',  label: 'Progress'  },
+    { id: 'home',      label: 'Home'      },
+    { id: 'scenarios', label: 'Scenarios' },
+    { id: 'rehearse',  label: 'Rehearse'  },
+    { id: 'coach',     label: 'Coach'     },
+    { id: 'progress',  label: 'Progress'  },
   ]
   return (
     <nav style={{
@@ -327,32 +381,34 @@ function BottomNav({ active, onChange }) {
       display: 'flex', zIndex: 200,
       paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingTop: 8,
     }}>
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => onChange(t.id)}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            background: 'none', border: 'none', padding: '4px 0', position: 'relative',
-          }}
-        >
-          {active === t.id && (
-            <div style={{
-              position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-              width: 22, height: 2.5, borderRadius: 2, background: C.coral,
-            }} />
-          )}
-          <span style={{ fontSize: 18, lineHeight: 1, color: active === t.id ? C.coral : C.inkFaint }}>
-            {t.icon}
-          </span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '.05em', fontFamily: SANS,
-            color: active === t.id ? C.coral : C.inkFaint,
-          }}>
-            {t.label.toUpperCase()}
-          </span>
-        </button>
-      ))}
+      {tabs.map((t) => {
+        const color = active === t.id ? C.coral : C.inkFaint
+        return (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              background: 'none', border: 'none', padding: '4px 0', position: 'relative',
+            }}
+          >
+            {active === t.id && (
+              <div style={{
+                position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+                width: 22, height: 2.5, borderRadius: 2, background: C.coral,
+              }} />
+            )}
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 23 }}>
+              <NavIcon id={t.id} color={color} />
+            </span>
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '.05em', fontFamily: SANS, color,
+            }}>
+              {t.label.toUpperCase()}
+            </span>
+          </button>
+        )
+      })}
     </nav>
   )
 }
