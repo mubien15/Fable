@@ -2,6 +2,10 @@ import Head from 'next/head'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ALL_TRACKS } from '../data/tracks'
 import { DAILY_REP_PROGRAM } from '../data/daily-rep'
+import {
+  getRehearsals, saveRehearsal, updateRehearsal,
+  newRehearsalId, rehearseDifficultyToSystem, relativeTime,
+} from '../data/rehearsals'
 
 // ═══════════════════════════════════════════════
 // DESIGN TOKENS
@@ -311,6 +315,7 @@ function BottomNav({ active, onChange }) {
     { id: 'home',      icon: '⌂',  label: 'Home'      },
     { id: 'scenarios', icon: '⊞',  label: 'Scenarios' },
     { id: 'coach',     icon: '◎',  label: 'Coach'     },
+    { id: 'rehearse',  icon: '✦',  label: 'Rehearse'  },
     { id: 'progress',  icon: '◈',  label: 'Progress'  },
   ]
   return (
@@ -1498,7 +1503,7 @@ function FeedbackScreen({ session, setScreen, setSessions, sessions, storylab, s
 // ═══════════════════════════════════════════════
 // SIMULATION SCREEN
 // ═══════════════════════════════════════════════
-function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMessages, onEnd }) {
+function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMessages, onEnd, onComplete }) {
   const [messages, setMessages] = useState(() => {
     // Restore saved messages if the user is resuming
     if (session?.messages?.length > 0) return session.messages
@@ -1922,6 +1927,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     lsSet(LS.sessions, updated)
     // Save messages to currentSession so debrief can access them
     onSaveMessages?.(msgs)
+    onComplete?.()  // e.g. increment rehearsal practiceCount
     if (session?.isDailyRep) {
       setScreen('daily-rep-debrief')
     } else {
@@ -1980,7 +1986,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         <button
           onClick={() => {
             onSaveMessages?.(messages)
-            setScreen(session?.scenarioData ? 'track-scenarios' : 'feedback')
+            setScreen(session?.rehearsalId ? 'rehearse' : session?.scenarioData ? 'track-scenarios' : 'feedback')
           }}
           style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, flexShrink: 0, padding: '4px 4px 4px 0' }}
         >←</button>
@@ -2629,8 +2635,15 @@ function ProgressSessionLog({ sessions, completedData }) {
 // ═══════════════════════════════════════════════
 // PROGRESS SCREEN — MAIN DASHBOARD
 // ═══════════════════════════════════════════════
-function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack }) {
+function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack, rehearsals = [] }) {
   const progress = useProgressData(sessions, dailyRep, completedData)
+  const rehearseStats = {
+    created:   rehearsals.length,
+    practiced: rehearsals.reduce((sum, r) => sum + (r.practiceCount || 0), 0),
+    done:      rehearsals.filter((r) => r.status === 'done').length,
+    helped:    rehearsals.filter((r) => r.practiceHelpedRating === 'yes').length,
+    rated:     rehearsals.filter((r) => r.practiceHelpedRating).length,
+  }
   const [profile,        setProfile]        = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
 
@@ -2785,6 +2798,34 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           openBriefing={openBriefing}
           setActiveTrack={setActiveTrack}
         />
+      )}
+
+      {/* ── Rehearsal history ─────────────────────────────────────────────── */}
+      {rehearseStats.created > 0 && (
+        <>
+          <SL>Rehearsal History</SL>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 20px', marginBottom: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink }}>{rehearseStats.created}</p>
+                <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkSoft }}>Prepared</p>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink }}>{rehearseStats.practiced}</p>
+                <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkSoft }}>Times rehearsed</p>
+              </div>
+              <div style={{ textAlign: 'center', flex: 1 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink }}>{rehearseStats.done}</p>
+                <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkSoft }}>Happened</p>
+              </div>
+            </div>
+            {rehearseStats.rated > 0 && (
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.inkMid, lineHeight: 1.5, textAlign: 'center', borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                {rehearseStats.helped} of {rehearseStats.rated} said the practice helped.
+              </p>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── Session log ───────────────────────────────────────────────────── */}
@@ -3651,8 +3692,9 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
 // ═══════════════════════════════════════════════
 // SCENARIO DEBRIEF SCREEN
 // ═══════════════════════════════════════════════
-function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, completedScenarios = [] }) {
+function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, completedScenarios = [], rehearsal = null, onRehearseAgain, onRehearseReady }) {
   const [debrief, setDebrief]       = useState(null)
+  const [regenerating, setRegenerating] = useState(false)
   const [loading, setLoading]       = useState(true)
   const [reflection, setReflection] = useState('')
   const [saved, setSaved]           = useState(false)
@@ -3723,7 +3765,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
       {/* Header */}
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 20, padding: 0 }}>←</button>
       <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-        Session complete ✓
+        {rehearsal ? 'Good work. You showed up.' : 'Session complete ✓'}
       </p>
       <h1 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 4, lineHeight: 1.25 }}>
         {scenario?.title || 'Debrief'}
@@ -3871,7 +3913,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
           {/* Reflection */}
           <div style={{ marginBottom: 20 }}>
             <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.inkMid, marginBottom: 12 }}>
-              What's one thing you want to practise differently next time?
+              What's one thing you want to carry into the real conversation?
             </p>
             <VoiceTextarea
               value={reflection}
@@ -3882,7 +3924,44 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
           </div>
 
           {/* Actions */}
-          {saved ? (
+          {rehearsal ? (
+            (() => {
+              // warmup → realistic → worstcase
+              const order = ['warmup', 'realistic', 'worstcase']
+              const idx   = order.indexOf(rehearsal.difficulty)
+              const harder = order[Math.min(idx + 1, order.length - 1)]
+              const canHarder = harder !== rehearsal.difficulty
+              if (regenerating) {
+                return (
+                  <div style={{ padding: '24px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                    <div style={{ fontSize: 32, color: C.coral, animation: 'pulse 1.6s ease-in-out infinite' }}>✦</div>
+                    <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkSoft }}>Rebuilding the counterpart…</p>
+                  </div>
+                )
+              }
+              return (
+                <div>
+                  <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 12 }}>Rehearse again</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {canHarder && (
+                      <Btn variant="secondary" onClick={() => { setRegenerating(true); onRehearseAgain?.(harder, '') }}>
+                        Same scenario, harder →
+                      </Btn>
+                    )}
+                    <Btn variant="secondary" onClick={() => { setRegenerating(true); onRehearseAgain?.(rehearsal.difficulty, "The counterpart is in a particularly bad mood today — they are less patient than usual and quicker to challenge.") }}>
+                      Different mood — they're angry
+                    </Btn>
+                    <Btn variant="secondary" onClick={() => { setRegenerating(true); onRehearseAgain?.('worstcase', 'Everything that can go wrong does. Maximum pressure throughout.') }}>
+                      Worst case — everything wrong
+                    </Btn>
+                    <Btn onClick={() => { onMarkComplete(scenario?.id, reflection, debrief); onRehearseReady?.() }}>
+                      I'm ready — mark as practiced ✓
+                    </Btn>
+                  </div>
+                </div>
+              )
+            })()
+          ) : saved ? (
             <>
               <div style={{ borderRadius: 14, background: C.tealBg, padding: '16px 18px', marginBottom: 16 }}>
                 <p style={{ fontFamily: SANS, color: C.teal, fontWeight: 700, fontSize: 14, marginBottom: 4 }}>✓ Rep saved.</p>
@@ -3928,6 +4007,423 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
 }
 
 // ═══════════════════════════════════════════════
+// REHEARSE — personal conversation preparation
+// ═══════════════════════════════════════════════
+
+const REHEARSE_DIFF = [
+  { id: 'warmup',    label: 'Warm up',    desc: 'Cooperative — build confidence' },
+  { id: 'realistic', label: 'Realistic',  desc: 'They push back the way they probably will' },
+  { id: 'worstcase', label: 'Worst case', desc: 'Everything goes wrong — are you ready?' },
+]
+
+// ── Entry screen — empty + active states ─────────────────────────────────────
+function RehearseScreen({ rehearsals, onNew, onRehearse, onReflect, goToScenarios }) {
+  const upcoming = rehearsals.filter((r) => r.status !== 'done')
+  const past     = rehearsals.filter((r) => r.status === 'done')
+
+  // ── Empty state ──
+  if (rehearsals.length === 0) {
+    return (
+      <div className="fade-up" style={{ padding: '36px 24px 110px' }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Rehearse</h1>
+        <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.5, marginBottom: 28 }}>
+          For the conversations that actually matter.
+        </p>
+
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '24px 22px', marginBottom: 24 }}>
+          <p style={{ fontFamily: SERIF, fontSize: 18, color: C.ink, lineHeight: 1.6, marginBottom: 16 }}>
+            You have a difficult conversation coming up.
+          </p>
+          <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.6, marginBottom: 16 }}>
+            Rehearse it here — before it's real.
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkSoft, lineHeight: 1.6 }}>
+            Tell Fable about the situation. We'll build the simulation around you.
+          </p>
+        </div>
+
+        <Btn onClick={onNew}>What conversation is coming up?</Btn>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '28px 0 16px' }}>
+          <div style={{ flex: 1, height: 1, background: C.border }} />
+          <span style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint, letterSpacing: '.06em' }}>or explore</span>
+          <div style={{ flex: 1, height: 1, background: C.border }} />
+        </div>
+        <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkSoft, lineHeight: 1.6, textAlign: 'center', marginBottom: 6 }}>
+          Not sure where to start?
+        </p>
+        <button onClick={goToScenarios} style={{ display: 'block', margin: '0 auto', background: 'none', border: 'none', color: C.coral, fontFamily: SANS, fontSize: 14, fontWeight: 600 }}>
+          Browse the Scenarios library →
+        </button>
+      </div>
+    )
+  }
+
+  // ── Active state ──
+  return (
+    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+      <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Rehearse</h1>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, lineHeight: 1.5, marginBottom: 28 }}>
+        For the conversations that matter
+      </p>
+
+      {upcoming.length > 0 && (
+        <>
+          <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 12 }}>Coming up</p>
+          {upcoming.map((r) => (
+            <RehearseCard key={r.id} r={r} onRehearse={onRehearse} onReflect={onReflect} />
+          ))}
+        </>
+      )}
+
+      {past.length > 0 && (
+        <>
+          <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, margin: '28px 0 12px' }}>Past conversations</p>
+          {past.map((r) => (
+            <RehearseCard key={r.id} r={r} onRehearse={onRehearse} onReflect={onReflect} done />
+          ))}
+        </>
+      )}
+
+      <div style={{ marginTop: 24 }}>
+        <Btn onClick={onNew}>+ New rehearsal</Btn>
+      </div>
+    </div>
+  )
+}
+
+function RehearseCard({ r, onRehearse, onReflect, done }) {
+  const diffLabel = (REHEARSE_DIFF.find((d) => d.id === r.difficulty) || {}).label || 'Realistic'
+  const practiced = r.practiceCount || 0
+
+  if (done) {
+    return (
+      <div style={{
+        background: C.surface, border: `1px solid ${C.border}`, borderLeft: `4px solid ${C.border}`,
+        borderRadius: 16, padding: '18px 20px', marginBottom: 12, opacity: 0.85,
+      }}>
+        <p style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 600, color: C.ink, marginBottom: 4 }}>{r.title}</p>
+        <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, marginBottom: 10 }}>
+          {r.realOutcomeDate ? new Date(r.realOutcomeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Done'}  ·  Done
+        </p>
+        {r.realOutcome && (
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: C.inkMid, lineHeight: 1.5, marginBottom: 8 }}>
+            "{r.realOutcome.length > 90 ? r.realOutcome.slice(0, 90) + '…' : r.realOutcome}"
+          </p>
+        )}
+        <button onClick={() => onReflect(r)} style={{ background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 13, fontWeight: 600, padding: 0 }}>
+          View reflection →
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      background: C.surface, border: `1px solid ${C.border}`, borderLeft: `4px solid ${C.coral}`,
+      borderRadius: 16, padding: '20px', marginBottom: 12,
+    }}>
+      <p style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600, color: C.ink, marginBottom: 4 }}>{r.title}</p>
+      <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, marginBottom: 12 }}>
+        {r.createdAt ? `Created ${relativeTime(r.createdAt)}` : ''}
+        {practiced > 0 ? `  ·  Practiced ${practiced} time${practiced === 1 ? '' : 's'}` : ''}
+        {`  ·  ${diffLabel}`}
+      </p>
+      {r.noteToSelf && (
+        <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: C.inkMid, lineHeight: 1.5, marginBottom: 14, borderLeft: `3px solid ${C.coralDim}`, paddingLeft: 12 }}>
+          "{r.noteToSelf}"
+        </p>
+      )}
+      <Btn onClick={() => onRehearse(r)} style={{ marginBottom: practiced > 0 ? 8 : 0 }}>
+        {practiced > 0 ? 'Rehearse again →' : 'Start rehearsing →'}
+      </Btn>
+      {practiced > 0 && (
+        <button onClick={() => onReflect(r)} style={{ display: 'block', width: '100%', textAlign: 'center', background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 13, fontWeight: 600, padding: '8px 0 0' }}>
+          It already happened — how did it go? →
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Build flow — 4 steps + AI generation loading ────────────────────────────
+const BUILD_MESSAGES = [
+  'Reading your situation…',
+  'Building the counterpart…',
+  'Preparing the pressure points…',
+  'Almost ready…',
+]
+
+function RehearseBuildScreen({ onCancel, onBuilt }) {
+  const [step, setStep]               = useState(1)
+  const [situation, setSituation]     = useState('')
+  const [persona, setPersona]         = useState('')
+  const [worry, setWorry]             = useState('')
+  const [successLooks, setSuccess]    = useState('')
+  const [difficulty, setDifficulty]   = useState('realistic')
+  const [building, setBuilding]       = useState(false)
+  const [buildMsg, setBuildMsg]       = useState(0)
+  const [error, setError]             = useState(false)
+
+  // Cycle the loading copy while the AI generates.
+  useEffect(() => {
+    if (!building) return
+    const t = setInterval(() => setBuildMsg((m) => (m + 1) % BUILD_MESSAGES.length), 2000)
+    return () => clearInterval(t)
+  }, [building])
+
+  const build = async () => {
+    setError(false)
+    setBuilding(true)
+    setBuildMsg(0)
+    const rehearsal = {
+      id: newRehearsalId(),
+      title: 'New rehearsal',
+      createdAt: new Date().toISOString(),
+      status: 'upcoming',
+      situation, persona, worry, successLooks,
+      difficulty,
+      practiceCount: 0,
+      lastPracticed: null,
+      noteToSelf: null,
+      realOutcome: null,
+      realOutcomeDate: null,
+      practiceHelpedRating: null,
+      generatedScenario: null,
+    }
+    try {
+      const res = await fetch('/api/coaching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'generate-scenario', rehearsal }),
+      })
+      if (!res.ok) throw new Error('generate failed')
+      const data = await res.json()
+      const scenario = data.scenario
+      if (!scenario || !scenario.opening_line) throw new Error('bad scenario')
+      // Attach an id so completion tracking works like a normal scenario.
+      scenario.id = rehearsal.id
+      scenario._rehearsalId = rehearsal.id
+      const finished = { ...rehearsal, generatedScenario: scenario, title: scenario.title || rehearsal.title }
+      saveRehearsal(finished)
+      onBuilt(finished, scenario)
+    } catch {
+      setBuilding(false)
+      setError(true)
+    }
+  }
+
+  // ── Loading state ──
+  if (building) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100dvh', padding: '0 32px', textAlign: 'center' }}>
+        <div style={{ fontSize: 40, color: C.coral, marginBottom: 24, animation: 'pulse 1.6s ease-in-out infinite' }}>✦</div>
+        <p style={{ fontFamily: SERIF, fontSize: 20, fontStyle: 'italic', color: C.ink, marginBottom: 14 }}>Building your scenario…</p>
+        <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkSoft }}>{BUILD_MESSAGES[buildMsg]}</p>
+      </div>
+    )
+  }
+
+  const steps = [
+    {
+      n: 1,
+      title: 'What conversation are you preparing for?',
+      help: "Describe the situation as if you're telling a trusted friend. The more detail, the more realistic the simulation.",
+      value: situation, set: setSituation,
+      placeholder: 'e.g. "I\'m presenting our Q3 audit findings to the board next Tuesday. We found a significant gap in controls that the CFO doesn\'t know about yet…"',
+      min: 30,
+    },
+    {
+      n: 2,
+      title: "Tell me about the person you're talking to.",
+      help: 'Their role, their personality, and how they typically react under pressure.',
+      note: 'This is how Fable will play the other person in your simulation.',
+      value: persona, set: setPersona,
+      placeholder: 'e.g. "The CFO — very senior, data-driven, hates surprises. Gets defensive when challenged publicly. Tends to ask sharp follow-up questions…"',
+      min: 20,
+    },
+    {
+      n: 3,
+      title: 'What are you most worried about?',
+      help: "What's the part of this conversation that keeps you up at night?",
+      value: worry, set: setWorry,
+      placeholder: 'e.g. "That they\'ll question my findings and I won\'t be able to defend them under pressure. Or that the conversation will turn political…"',
+      min: 20,
+    },
+    {
+      n: 4,
+      title: 'What does a good outcome look like?',
+      help: 'When you walk out of this conversation — what would make you feel it went well?',
+      value: successLooks, set: setSuccess,
+      placeholder: 'e.g. "They accept the findings without a major dispute. I leave with a clear remediation plan agreed, and the relationship intact…"',
+      min: 20,
+      last: true,
+    },
+  ]
+  const cur = steps[step - 1]
+  const canNext = (cur.value || '').trim().length >= cur.min
+
+  return (
+    <div className="fade-up" style={{ padding: '20px 20px 40px', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header: back + step counter + dots */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <button
+          onClick={() => (step === 1 ? onCancel() : setStep(step - 1))}
+          style={{ background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 14, padding: '4px 0' }}
+        >← Back</button>
+        <span style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, fontWeight: 600 }}>Step {step} of 4</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+        {[1, 2, 3, 4].map((s) => (
+          <div key={s} style={{ width: s === step ? 22 : 8, height: 8, borderRadius: 4, background: s <= step ? C.coral : C.coralDim, transition: 'all .3s' }} />
+        ))}
+      </div>
+
+      <h1 style={{ fontFamily: SERIF, fontSize: 25, fontWeight: 700, color: C.ink, lineHeight: 1.3, marginBottom: 12 }}>{cur.title}</h1>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, lineHeight: 1.6, marginBottom: 20 }}>{cur.help}</p>
+
+      <VoiceTextarea value={cur.value} onChange={cur.set} placeholder={cur.placeholder} minHeight={150} />
+
+      {cur.note && (
+        <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.inkSoft, lineHeight: 1.55, marginTop: 14 }}>{cur.note}</p>
+      )}
+
+      {cur.last && (
+        <div style={{ marginTop: 24 }}>
+          <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: C.inkSoft, marginBottom: 12 }}>
+            How do you want to prepare?
+          </p>
+          {REHEARSE_DIFF.map((d) => {
+            const sel = difficulty === d.id
+            return (
+              <button
+                key={d.id}
+                onClick={() => setDifficulty(d.id)}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  background: sel ? C.coralBg : C.surface,
+                  border: `1.5px solid ${sel ? C.coral : C.border}`,
+                  borderRadius: 12, padding: '13px 16px', marginBottom: 10,
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{
+                    width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${sel ? C.coral : C.border}`,
+                    background: sel ? C.coral : 'transparent',
+                    boxShadow: sel ? `inset 0 0 0 2px ${C.surface}` : 'none',
+                  }} />
+                  <span>
+                    <span style={{ display: 'block', fontFamily: SANS, fontSize: 14, fontWeight: 700, color: sel ? C.coral : C.ink }}>{d.label}</span>
+                    <span style={{ display: 'block', fontFamily: SANS, fontSize: 12, color: C.inkSoft, lineHeight: 1.4, marginTop: 2 }}>{d.desc}</span>
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {error && (
+        <p style={{ fontFamily: SANS, fontSize: 13, color: C.coral, marginTop: 16, textAlign: 'center' }}>
+          Couldn't build your scenario — tap to try again.
+        </p>
+      )}
+
+      <div style={{ marginTop: 24 }}>
+        {cur.last ? (
+          <Btn onClick={build} disabled={!canNext}>Build my scenario →</Btn>
+        ) : (
+          <Btn onClick={() => canNext && setStep(step + 1)} disabled={!canNext}>Next →</Btn>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Note to self — shown after marking practiced ────────────────────────────
+function RehearseNoteScreen({ rehearsal, onSave, onSkip }) {
+  const [note, setNote] = useState(rehearsal?.noteToSelf || '')
+  return (
+    <div className="fade-up" style={{ padding: '48px 24px 40px', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <h1 style={{ fontFamily: SERIF, fontSize: 25, fontWeight: 700, color: C.ink, lineHeight: 1.3, marginBottom: 14 }}>
+        One thing to remember when you walk in.
+      </h1>
+      <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.6, marginBottom: 24 }}>
+        What do you want to carry into this conversation?
+      </p>
+      <VoiceTextarea value={note} onChange={setNote} placeholder="Write one sentence…" minHeight={110} />
+      <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.inkSoft, lineHeight: 1.55, marginTop: 14, marginBottom: 28 }}>
+        This will appear at the top of your rehearsal when you open it again.
+      </p>
+      <Btn onClick={() => onSave(note.trim())} disabled={!note.trim()}>Save my note</Btn>
+      <button onClick={onSkip} style={{ background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 14, marginTop: 14, padding: '8px 0' }}>
+        Skip for now
+      </button>
+    </div>
+  )
+}
+
+// ── Post-conversation reflection ────────────────────────────────────────────
+const HELPED_OPTIONS = [
+  { id: 'yes',      label: 'Yes — I felt more prepared' },
+  { id: 'somewhat', label: 'Somewhat — parts of it helped' },
+  { id: 'no',       label: 'Not really — it went differently' },
+]
+
+function RehearseReflectionScreen({ rehearsal, onSave, onBack }) {
+  const alreadyDone = rehearsal?.status === 'done'
+  const [outcome, setOutcome] = useState(rehearsal?.realOutcome || '')
+  const [rating, setRating]   = useState(rehearsal?.practiceHelpedRating || null)
+
+  return (
+    <div className="fade-up" style={{ padding: '40px 24px 40px', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 18, padding: 0, alignSelf: 'flex-start' }}>←</button>
+      <h1 style={{ fontFamily: SERIF, fontSize: 25, fontWeight: 700, color: C.ink, lineHeight: 1.3, marginBottom: 12 }}>
+        How did it actually go?
+      </h1>
+      <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.6, marginBottom: 24 }}>
+        You practiced. You showed up. What happened?
+      </p>
+      <VoiceTextarea value={outcome} onChange={setOutcome} placeholder="Write a few lines…" minHeight={130} />
+
+      <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.inkMid, margin: '24px 0 12px' }}>
+        Did the practice help?
+      </p>
+      {HELPED_OPTIONS.map((o) => {
+        const sel = rating === o.id
+        return (
+          <button
+            key={o.id}
+            onClick={() => setRating(o.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+              background: sel ? C.blueBg : C.surface,
+              border: `1.5px solid ${sel ? C.blue : C.border}`,
+              borderRadius: 12, padding: '13px 16px', marginBottom: 10,
+            }}
+          >
+            <span style={{
+              width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+              border: `2px solid ${sel ? C.blue : C.border}`,
+              background: sel ? C.blue : 'transparent',
+              boxShadow: sel ? `inset 0 0 0 2px ${C.surface}` : 'none',
+            }} />
+            <span style={{ fontFamily: SANS, fontSize: 14, color: sel ? C.blue : C.ink, fontWeight: sel ? 700 : 500 }}>{o.label}</span>
+          </button>
+        )
+      })}
+
+      <div style={{ marginTop: 20 }}>
+        <Btn onClick={() => onSave(outcome.trim(), rating)} disabled={!outcome.trim()}>
+          {alreadyDone ? 'Update reflection' : 'Save reflection'}
+        </Btn>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
 // APP ROOT
 // ═══════════════════════════════════════════════
 export default function App() {
@@ -3966,6 +4462,15 @@ export default function App() {
   // Coach session state
   const [coachSession, setCoachSession] = useState(null)
 
+  // Rehearse state
+  const [rehearsals,      setRehearsals]      = useState([])
+  const [activeRehearsal, setActiveRehearsal] = useState(null)
+  // Where the briefing / debrief "back" arrow returns to (tracks vs rehearse).
+  const [briefingBackTarget, setBriefingBackTarget] = useState('track-scenarios')
+  const [debriefBackTarget,  setDebriefBackTarget]  = useState('track-scenarios')
+
+  const refreshRehearsals = () => setRehearsals(getRehearsals())
+
   // Load from localStorage on mount
   useEffect(() => {
     const savedUser          = lsGet(LS.user, null)
@@ -3980,6 +4485,7 @@ export default function App() {
     setDailyRep(savedDailyRep)
     setCompletedScenarios(savedCompleted)
     setCompletedData(savedCompletedData)
+    setRehearsals(getRehearsals())
 
     if (savedUser?.onboarded) {
       setUser(savedUser)
@@ -4028,10 +4534,98 @@ export default function App() {
       userRole: user?.role || 'all',
       isDailyRep: isForDailyRep,
       dailyRepDay: isForDailyRep ? pendingDailyRepDay.day : undefined,
+      rehearsalId: scenarioData._rehearsalId || null,
       voiceEnabled,
     })
     if (isForDailyRep) setPendingDailyRepDay(null)
     setScreen('simulation')
+  }
+
+  // ── Rehearse handlers ──────────────────────────────────────────────────────
+  const startNewRehearsal = () => setScreen('rehearse-build')
+
+  // After AI builds the scenario → route through the standard briefing screen.
+  const onRehearsalBuilt = (rehearsal, scenario) => {
+    refreshRehearsals()
+    setActiveRehearsal(rehearsal)
+    setActiveBriefingScenario(scenario)
+    setPendingBriefingDifficulty(rehearseDifficultyToSystem(rehearsal.difficulty))
+    setBriefingBackTarget('rehearse')
+    setDebriefBackTarget('rehearse')
+    setScreen('scenario-briefing')
+  }
+
+  // Re-practice an existing rehearsal (from its card).
+  const rehearseExisting = (rehearsal) => {
+    if (!rehearsal?.generatedScenario) return
+    setActiveRehearsal(rehearsal)
+    setActiveBriefingScenario(rehearsal.generatedScenario)
+    setPendingBriefingDifficulty(rehearseDifficultyToSystem(rehearsal.difficulty))
+    setBriefingBackTarget('rehearse')
+    setDebriefBackTarget('rehearse')
+    setScreen('scenario-briefing')
+  }
+
+  // Regenerate a rehearsal's counterpart at a new intensity / mood (from debrief).
+  const rehearseAgainVariation = async (rehearsalId, newDifficulty, extraInstruction) => {
+    const rehearsal = getRehearsals().find((r) => r.id === rehearsalId)
+    if (!rehearsal) return
+    try {
+      const res = await fetch('/api/coaching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'generate-scenario',
+          rehearsal: { ...rehearsal, difficulty: newDifficulty || rehearsal.difficulty },
+          extraInstruction: extraInstruction || '',
+        }),
+      })
+      if (!res.ok) throw new Error('regen failed')
+      const data = await res.json()
+      const scenario = data.scenario
+      scenario.id = rehearsal.id
+      scenario._rehearsalId = rehearsal.id
+      updateRehearsal(rehearsal.id, { difficulty: newDifficulty || rehearsal.difficulty, generatedScenario: scenario })
+      refreshRehearsals()
+      const updated = { ...rehearsal, difficulty: newDifficulty || rehearsal.difficulty, generatedScenario: scenario }
+      setActiveRehearsal(updated)
+      setActiveBriefingScenario(scenario)
+      setPendingBriefingDifficulty(rehearseDifficultyToSystem(newDifficulty || rehearsal.difficulty))
+      setBriefingBackTarget('rehearse')
+      setDebriefBackTarget('rehearse')
+      setScreen('scenario-briefing')
+    } catch {
+      // Fall back to re-running the existing scenario unchanged.
+      rehearseExisting(getRehearsals().find((r) => r.id === rehearsalId))
+    }
+  }
+
+  // Count a completed rehearsal simulation.
+  const incrementRehearsalPractice = (rehearsalId) => {
+    if (!rehearsalId) return
+    const r = getRehearsals().find((x) => x.id === rehearsalId)
+    if (!r) return
+    updateRehearsal(rehearsalId, {
+      practiceCount: (r.practiceCount || 0) + 1,
+      lastPracticed: new Date().toISOString(),
+      status: r.status === 'done' ? 'done' : 'practiced',
+    })
+    refreshRehearsals()
+  }
+
+  const saveRehearsalNote = (rehearsalId, note) => {
+    updateRehearsal(rehearsalId, { noteToSelf: note || null })
+    refreshRehearsals()
+  }
+
+  const saveRehearsalReflection = (rehearsalId, outcome, rating) => {
+    updateRehearsal(rehearsalId, {
+      realOutcome: outcome || null,
+      realOutcomeDate: new Date().toISOString(),
+      practiceHelpedRating: rating || null,
+      status: 'done',
+    })
+    refreshRehearsals()
   }
 
   // Open the briefing screen for a scenario
@@ -4129,7 +4723,7 @@ export default function App() {
   }
 
   const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab', 'daily-rep', 'daily-rep-briefing', 'daily-rep-debrief', 'scenario-briefing', 'scenario-debrief']
-  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation', 'daily-rep-insight'].includes(screen)
+  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation', 'daily-rep-insight', 'rehearse-build', 'rehearse-note', 'rehearse-reflect'].includes(screen)
 
   const renderScreen = () => {
     switch (screen) {
@@ -4284,6 +4878,7 @@ export default function App() {
             sessions={sessions}
             setSessions={setSessions}
             onSaveMessages={(msgs) => setCurrentSession((prev) => prev ? { ...prev, messages: msgs } : prev)}
+            onComplete={() => { if (currentSession?.rehearsalId) incrementRehearsalPractice(currentSession.rehearsalId) }}
           />
         )
 
@@ -4293,7 +4888,7 @@ export default function App() {
             scenario={activeBriefingScenario}
             initialDifficulty={pendingBriefingDifficulty}
             onStart={(scenario, difficulty, voiceEnabled) => startScenario(scenario, difficulty, voiceEnabled)}
-            onBack={() => setScreen('track-scenarios')}
+            onBack={() => { setScreen(briefingBackTarget); if (briefingBackTarget === 'rehearse') setActiveTab('rehearse') }}
           />
         )
 
@@ -4302,9 +4897,49 @@ export default function App() {
           <ScenarioDebriefScreen
             session={currentSession}
             completedScenarios={completedScenarios}
-            onBack={() => setScreen('track-scenarios')}
+            rehearsal={currentSession?.rehearsalId ? rehearsals.find((r) => r.id === currentSession.rehearsalId) : null}
+            onBack={() => { setScreen(debriefBackTarget); if (debriefBackTarget === 'rehearse') setActiveTab('rehearse') }}
             onTryAgain={(scenario, nextDiff) => openBriefing(scenario, nextDiff)}
             onMarkComplete={(scenarioId, reflection, debrief) => markScenarioComplete(scenarioId, reflection, debrief)}
+            onRehearseAgain={(newDiff, extra) => rehearseAgainVariation(currentSession?.rehearsalId, newDiff, extra)}
+            onRehearseReady={() => { setActiveRehearsal(rehearsals.find((r) => r.id === currentSession?.rehearsalId) || activeRehearsal); setScreen('rehearse-note') }}
+          />
+        )
+
+      case 'rehearse':
+        return (
+          <RehearseScreen
+            rehearsals={rehearsals}
+            onNew={startNewRehearsal}
+            onRehearse={rehearseExisting}
+            onReflect={(r) => { setActiveRehearsal(r); setScreen('rehearse-reflect') }}
+            goToScenarios={() => goTab('scenarios')}
+          />
+        )
+
+      case 'rehearse-build':
+        return (
+          <RehearseBuildScreen
+            onCancel={() => { setScreen('rehearse'); setActiveTab('rehearse') }}
+            onBuilt={onRehearsalBuilt}
+          />
+        )
+
+      case 'rehearse-note':
+        return (
+          <RehearseNoteScreen
+            rehearsal={activeRehearsal}
+            onSave={(note) => { saveRehearsalNote(activeRehearsal?.id, note); setScreen('rehearse'); setActiveTab('rehearse') }}
+            onSkip={() => { setScreen('rehearse'); setActiveTab('rehearse') }}
+          />
+        )
+
+      case 'rehearse-reflect':
+        return (
+          <RehearseReflectionScreen
+            rehearsal={activeRehearsal}
+            onSave={(outcome, rating) => { saveRehearsalReflection(activeRehearsal?.id, outcome, rating); setScreen('rehearse'); setActiveTab('rehearse') }}
+            onBack={() => { setScreen('rehearse'); setActiveTab('rehearse') }}
           />
         )
 
@@ -4320,6 +4955,7 @@ export default function App() {
             completedData={completedData}
             openBriefing={openBriefing}
             setActiveTrack={setActiveTrack}
+            rehearsals={rehearsals}
           />
         )
 

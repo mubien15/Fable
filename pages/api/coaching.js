@@ -78,6 +78,82 @@ export default async function handler(req, res) {
       return res.json(JSON.parse(cleaned))
     }
 
+    // ── Rehearse: build a custom scenario from the user's own inputs ──────
+    if (mode === 'generate-scenario') {
+      const { rehearsal, extraInstruction = '' } = req.body
+      const r = rehearsal || {}
+
+      const moodNote = extraInstruction
+        ? `\nAdditional direction for the counterpart: ${extraInstruction}`
+        : ''
+
+      const genPrompt = `You are building a professional conversation simulation for Fable, a conversation-training app.
+
+A user has described a real, upcoming conversation they need to prepare for. Build a custom scenario that Fable will use to simulate this specific conversation — with a realistic AI counterpart that matches the person they described.
+
+## The User's Inputs
+Their situation:
+"${r.situation || ''}"
+
+The person they're talking to:
+"${r.persona || ''}"
+
+What they're most worried about:
+"${r.worry || ''}"
+
+What success looks like:
+"${r.successLooks || ''}"
+
+Preparation intensity: ${r.difficulty || 'realistic'}
+(warmup = cooperative, build confidence; realistic = moderate, realistic resistance; worstcase = maximum pressure, everything that can go wrong does)${moodNote}
+
+---
+Build a scenario object. Return ONLY valid JSON — no preamble, no markdown:
+{
+  "title": "<short memorable title for this rehearsal — 4-6 words, no quotes inside>",
+  "userRole": "<the user's role in this conversation, drawn from their situation>",
+  "counterpartRole": "<who the AI will play — based on their persona description>",
+  "context": "<2-3 sentence scene-setting the user reads before starting>",
+  "context_short": "<a single tighter sentence version of the context>",
+  "challenge": "<1-2 sentences on what makes this hard — drawn from their worry>",
+  "opening_line": "<the first thing the counterpart says to open the conversation. Natural, in character, creates immediate tension. This is spoken BY the counterpart TO the user — never in the user's voice.>",
+  "good_outcome": "<what success looks like — drawn from their successLooks input>",
+  "watch_out_for": [
+    "<trap 1 — specific to their situation>",
+    "<trap 2 — specific to their situation>",
+    "<trap 3 — specific to their situation>"
+  ],
+  "coaching_focus": [
+    "<focus area 1 — a specific skill this conversation tests>",
+    "<focus area 2>",
+    "<focus area 3>"
+  ],
+  "counterpart_instructions": "<detailed, specific instructions for how the AI should play this exact person — personality, agenda, triggers, when they soften, when they escalate. Reference specifics the user described. 150-200 words.>",
+  "voice": "onyx"
+}
+
+Make it feel written specifically for this person's situation. Do not be generic. Reference specifics from their inputs. The opening line should feel real and slightly uncomfortable — exactly how this person would actually open the conversation.`
+
+      const genResponse = await client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1200,
+        system: 'You are a senior communication coach and scenario designer. You return only valid JSON, no markdown, no preamble.',
+        messages: [{ role: 'user', content: genPrompt }],
+      })
+
+      const gRaw     = genResponse.content[0].text.trim()
+      const gCleaned = gRaw.replace(/^```json?\s*/i, '').replace(/\s*```$/, '')
+      const scenario = JSON.parse(gCleaned)
+
+      // The simulation prompt builder expects `system_prompt_addition`; map the
+      // generated counterpart instructions onto it so role-play runs identically.
+      scenario.system_prompt_addition = scenario.counterpart_instructions
+        ? `\n## Counterpart Behaviour Guide\n${scenario.counterpart_instructions}\n`
+        : ''
+
+      return res.json({ scenario })
+    }
+
     // ── Simulation: role-play as the counterpart ──────────────────────────
     if (mode === 'simulation') {
       // `scenario` may be a full structured object (from scenario tracks)
@@ -288,6 +364,7 @@ Write a 2-3 sentence personalised communication profile. Be specific to these pa
     if (mode === 'coach-debrief')   return res.json({ insight: 'Something shifted in this conversation — give yourself time to sit with it.', nextStep: 'Notice what came up and let it settle before deciding what to do next.' })
     if (mode === 'simulation')      return res.json({ reply: "Let's pick this up again in a moment." })
     if (mode === 'simulation-hint') return res.json({ hint: 'Take a breath and focus on what you observed — lead with evidence, not interpretation.' })
+    if (mode === 'generate-scenario') return res.status(502).json({ error: 'Could not build your scenario right now — please try again in a moment.' })
     if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: { observation: '', quote: '', why_it_works: '' }, what_created_friction: { observation: '', quote: '', impact: '' }, the_pattern: '', try_this_instead: '', the_principle: '', focus_scores: {}, speech_observations: { filler_phrases: [], hedging_language: [], strong_moments: [] }, next_challenge: '' })
     if (mode === 'profile')         return res.json({ profile: null })
     if (mode === 'pattern')         return res.json({ pattern: 'Keep practising — patterns emerge over time.' })
