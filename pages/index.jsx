@@ -314,8 +314,8 @@ function BottomNav({ active, onChange }) {
   const tabs = [
     { id: 'home',      icon: '⌂',  label: 'Home'      },
     { id: 'scenarios', icon: '⊞',  label: 'Scenarios' },
+    { id: 'rehearse',  icon: '🎭', label: 'Rehearse'  },
     { id: 'coach',     icon: '◎',  label: 'Coach'     },
-    { id: 'rehearse',  icon: '✦',  label: 'Rehearse'  },
     { id: 'progress',  icon: '◈',  label: 'Progress'  },
   ]
   return (
@@ -4031,14 +4031,14 @@ function RehearseScreen({ rehearsals, onNew, onRehearse, onReflect, goToScenario
         </p>
 
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '24px 22px', marginBottom: 24 }}>
-          <p style={{ fontFamily: SERIF, fontSize: 18, color: C.ink, lineHeight: 1.6, marginBottom: 16 }}>
-            You have a difficult conversation coming up.
+          <p style={{ fontFamily: SERIF, fontSize: 19, color: C.ink, lineHeight: 1.5, marginBottom: 16 }}>
+            Have a difficult conversation coming up?
           </p>
           <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.6, marginBottom: 16 }}>
-            Rehearse it here — before it's real.
+            This is your space to build a simulation <strong style={{ color: C.coral }}>personalized to you</strong> — your exact situation, the real person you're facing, and what you're worried about.
           </p>
           <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkSoft, lineHeight: 1.6 }}>
-            Tell Fable about the situation. We'll build the simulation around you.
+            Tell Fable about it in a few steps, and we'll custom-build the conversation so you can rehearse it — before it's real.
           </p>
         </div>
 
