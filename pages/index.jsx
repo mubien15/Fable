@@ -1540,11 +1540,15 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const [needsOpeningTap, setNeedsOpeningTap] = useState(hasOpeningLine)
   const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
   const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
-  const autoRestartMicRef = useRef(false)  // unused — kept to avoid ref churn
+  // ── Voice input via MediaRecorder + Whisper (iOS-reliable; replaces Web Speech API) ──
+  const [transcribing, setTranscribing] = useState(false)  // true while Whisper is processing
+  const mediaRecorderRef = useRef(null)
+  const mediaStreamRef   = useRef(null)
+  const audioChunksRef   = useRef([])
+  const recMimeRef       = useRef('audio/mp4')
   // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
-  const recRef = useRef(null)
   const finalRef = useRef('')
 
 
@@ -1686,76 +1690,11 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   // Opening line is triggered by user tap (handleBegin) to satisfy iOS audio unlock requirement.
   // If voice is off, or session is being resumed, no tap needed — opening line already in chat.
 
-  // Note: mic is fully manual — user taps "Tap to speak" after AI finishes.
-  // No auto-restart: the idle "Tap to speak" button is shown as soon as isPlaying → false.
-
-  // ── Speech recognition ─────────────────────────────────────────────────────
-  // We use continuous:false (one utterance at a time) because Chrome has a
-  // known bug where continuous:true silently stops producing results on the
-  // 2nd+ instance. We manage continuity ourselves via launchRecognition().
-  const wantListeningRef = useRef(false)  // true while user wants mic active
-
-  const launchRecognition = () => {
-    if (!wantListeningRef.current) return   // user cancelled before we got here
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return
-
-    // Abort any lingering instance first
-    try { recRef.current?.stop() } catch {}
-    recRef.current = null
-
-    const r = new SR()
-    r.continuous     = false  // one utterance; we restart manually if needed
-    r.interimResults = true
-    r.lang           = 'en-US'
-
-    r.onresult = (e) => {
-      if (recRef.current !== r) return
-      let finalText = '', interim = ''
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' '
-        else interim += e.results[i][0].transcript
-      }
-      if (finalText) finalRef.current += finalText
-      setInput((finalRef.current + interim).trim())
-    }
-
-    r.onerror = (e) => {
-      if (recRef.current !== r) return
-      recRef.current = null
-      if (e.error === 'no-speech') {
-        // Browser timed out waiting — restart silently if we still want to listen
-        if (wantListeningRef.current && !finalRef.current.trim()) {
-          setTimeout(launchRecognition, 100)
-        }
-        // If we already have speech, keep UI as-is so user can tap Send
-      } else {
-        console.warn('[STT] error:', e.error)
-        wantListeningRef.current = false
-        setListening(false)
-      }
-    }
-
-    r.onend = () => {
-      if (recRef.current !== r) return
-      recRef.current = null
-      if (!wantListeningRef.current) return  // user cancelled — do nothing
-      if (!finalRef.current.trim()) {
-        // No speech captured yet — restart to keep waiting
-        setTimeout(launchRecognition, 100)
-      }
-      // If we have speech, stay in listening UI so user can tap Send →
-    }
-
-    try {
-      r.start()
-      recRef.current = r
-    } catch (e) {
-      console.error('[STT] start() threw:', e.message)
-      wantListeningRef.current = false
-      setListening(false)
-    }
-  }
+  // ── Voice input: MediaRecorder → OpenAI Whisper ────────────────────────────
+  // We do NOT use webkitSpeechRecognition: on iOS Safari it silently stops
+  // producing results once any <audio> element has played (our TTS reply) —
+  // the mic "records" forever but onresult never fires. MediaRecorder +
+  // server-side Whisper transcription is reliable turn after turn on iOS.
 
   // Called when user taps "Tap to hear the opening" — satisfies iOS audio gesture requirement
   const handleBegin = () => {
@@ -1764,48 +1703,123 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     speak(session.scenarioData.opening_line, session.scenarioData.voice || 'onyx')
   }
 
-  const toggleMic = () => {
+  // Choose a recording container Safari/Chrome support and Whisper accepts.
+  const pickMime = () => {
+    if (typeof MediaRecorder === 'undefined') return ''
+    const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
+    for (const m of candidates) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m } catch {}
+    }
+    return ''
+  }
+
+  const releaseMicStream = () => {
+    try { mediaStreamRef.current?.getTracks().forEach((t) => t.stop()) } catch {}
+    mediaStreamRef.current = null
+  }
+
+  const startRecording = async () => {
     unlockAudio()
-    if (listening) {
-      // User tapping to cancel
-      wantListeningRef.current = false
-      const prev = recRef.current
-      recRef.current = null
-      try { prev?.stop() } catch {}
-      finalRef.current = ''
-      setInput('')
-      setListening(false)
+    setTtsError(null)
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setTtsError('Voice recording is not supported in this browser.')
       return
     }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
-
-    finalRef.current = ''
-    setInput('')
-    wantListeningRef.current = true
-    setListening(true)
-    launchRecognition()
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStreamRef.current = stream
+      const mime = pickMime()
+      recMimeRef.current = mime || 'audio/mp4'
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
+      audioChunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mediaRecorderRef.current = mr
+      mr.start()
+      setListening(true)
+    } catch (err) {
+      console.error('[mic] getUserMedia failed:', err?.name, err?.message)
+      releaseMicStream()
+      setListening(false)
+      if (err?.name === 'NotAllowedError' || err?.name === 'SecurityError') {
+        setTtsError('Microphone access denied — enable it in Safari settings, then reload.')
+      } else {
+        setTtsError('Could not access the microphone — try again.')
+      }
+    }
   }
 
-  // Stop mic when message is sent (does not clear input — send() reads it first)
-  const stopMic = () => {
-    wantListeningRef.current = false
-    const prev = recRef.current
-    recRef.current = null     // clear first so stale onend/onerror are no-ops
-    try { prev?.stop() } catch {}
+  // Stop the recorder, transcribe via Whisper, then either send (voice mode)
+  // or fill the input (text mode) depending on autoSend.
+  const finishRecording = async (autoSend) => {
+    const mr = mediaRecorderRef.current
+    if (!mr) { setListening(false); return }
+    mediaRecorderRef.current = null
+    setListening(false)
+    setTranscribing(true)
+
+    // Wait for the recorder to flush its final chunk before building the blob.
+    const blob = await new Promise((resolve) => {
+      mr.addEventListener('stop', () => {
+        resolve(new Blob(audioChunksRef.current, { type: recMimeRef.current }))
+      }, { once: true })
+      try { mr.stop() } catch { resolve(new Blob(audioChunksRef.current, { type: recMimeRef.current })) }
+    })
+    releaseMicStream()
+
+    try {
+      if (!blob || blob.size === 0) {
+        setTranscribing(false)
+        setTtsError('No audio captured — hold a moment longer before stopping.')
+        return
+      }
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': recMimeRef.current },
+        body: blob,
+      })
+      const data = await res.json().catch(() => ({}))
+      setTranscribing(false)
+      const text = (data.text || '').trim()
+      if (!res.ok || !text) {
+        setTtsError(data.error || "Didn't catch that — tap to try again.")
+        return
+      }
+      if (autoSend) send(text)
+      else setInput((prev) => (prev ? (prev + ' ' + text).trim() : text))
+    } catch (err) {
+      console.error('[transcribe] client error:', err?.message)
+      setTranscribing(false)
+      setTtsError('Transcription failed — check your connection and try again.')
+    }
+  }
+
+  const cancelRecording = () => {
+    const mr = mediaRecorderRef.current
+    mediaRecorderRef.current = null
+    audioChunksRef.current = []
+    try { mr?.stop() } catch {}
+    releaseMicStream()
     setListening(false)
   }
+
+  // Text-mode mic button: tap to start, tap again to stop + fill the input box.
+  const toggleMic = () => {
+    if (listening) finishRecording(false)
+    else if (!transcribing) startRecording()
+  }
+
+  // Release the mic hardware if the screen unmounts mid-recording.
+  useEffect(() => () => releaseMicStream(), [])
 
   const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
 
   const DEBRIEF_TRIGGERS = ['feedback', 'done', 'end session', "that's enough", 'finish', 'wrap up', 'debrief']
   const wantsDebrief = (msg) => DEBRIEF_TRIGGERS.some((t) => msg.toLowerCase().includes(t))
 
-  const send = async () => {
+  const send = async (override) => {
     unlockAudio()  // satisfy iOS gesture requirement — must be called synchronously on tap
-    const text = input.trim()
+    const text = (typeof override === 'string' ? override : input).trim()
     if (!text || loading || done) return
-    stopMic()
     setSendError(false)
 
     const userMsg = { role: 'user', content: text }
@@ -2132,33 +2146,39 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
                   Tap to interrupt
                 </p>
               </div>
+            ) : transcribing ? (
+              /* Whisper is converting the recording to text */
+              <div style={{ padding: '10px 0 4px' }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  background: C.blueBg, border: `1px solid ${C.blueDim}`,
+                  borderRadius: 20, padding: '5px 14px',
+                }}>
+                  <Dots />
+                  <span style={{ fontFamily: SANS, fontSize: 12, color: C.blue, fontWeight: 600 }}>
+                    Transcribing…
+                  </span>
+                </div>
+              </div>
             ) : listening ? (
-              /* User is speaking */
+              /* User is recording their reply */
               <div style={{ padding: '4px 0 4px' }}>
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7,
                   background: C.coralBg, border: `1px solid ${C.coralDim}`,
-                  borderRadius: 20, padding: '5px 12px', marginBottom: 8,
+                  borderRadius: 20, padding: '5px 12px', marginBottom: 10,
                 }}>
                   <span style={{
                     width: 8, height: 8, borderRadius: '50%', background: C.coral, flexShrink: 0,
                     animation: 'recordPulse 1.5s ease-in-out infinite',
                   }} />
                   <span style={{ fontFamily: SANS, fontSize: 12, color: C.coral, fontWeight: 600 }}>
-                    Listening…
+                    Recording… speak now
                   </span>
                 </div>
-                {input && (
-                  <p style={{
-                    fontFamily: SERIF, fontSize: 14, color: C.inkMid,
-                    margin: '0 0 8px', fontStyle: 'italic', lineHeight: 1.5,
-                    overflow: 'hidden', textOverflow: 'ellipsis',
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  }}>{input}</p>
-                )}
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
                   <button
-                    onClick={toggleMic}
+                    onClick={cancelRecording}
                     style={{
                       background: 'transparent', border: `1px solid ${C.border}`,
                       borderRadius: 10, padding: '8px 16px',
@@ -2166,14 +2186,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
                     }}
                   >✕ Cancel</button>
                   <button
-                    onClick={send}
-                    disabled={!input.trim()}
+                    onClick={() => finishRecording(true)}
                     style={{
-                      background: input.trim() ? C.coral : C.coralDim,
+                      background: C.coral,
                       border: 'none', borderRadius: 10, padding: '8px 20px',
                       fontFamily: SANS, fontSize: 13, fontWeight: 700, color: '#fff',
                     }}
-                  >Send →</button>
+                  >■ Stop &amp; Send</button>
                 </div>
               </div>
             ) : loading ? (
