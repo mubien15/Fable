@@ -187,39 +187,74 @@ function Card({ children, bg = C.surface, border = C.border, style: s = {} }) {
 
 function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
   const [listening, setListening] = useState(false)
-  const recRef  = useRef(null)
+  const recRef   = useRef(null)
   const finalRef = useRef('')
+  const wantRef  = useRef(false)  // true while user wants mic active
 
-  useEffect(() => () => recRef.current?.stop(), [])
+  useEffect(() => () => { wantRef.current = false; try { recRef.current?.stop() } catch {} }, [])
+
+  const launch = () => {
+    if (!wantRef.current) return
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) return
+    try { recRef.current?.stop() } catch {}
+    recRef.current = null
+
+    const r = new SR()
+    r.continuous     = false  // continuous:true is unreliable on iOS Safari
+    r.interimResults = true
+    r.lang           = 'en-US'
+
+    r.onresult = (e) => {
+      if (recRef.current !== r) return
+      let finalText = '', interim = ''
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' '
+        else interim += e.results[i][0].transcript
+      }
+      if (finalText) finalRef.current += finalText
+      onChange((finalRef.current + interim).trim())
+    }
+    r.onerror = (e) => {
+      if (recRef.current !== r) return
+      recRef.current = null
+      if (e.error === 'no-speech' && wantRef.current) {
+        setTimeout(launch, 100)
+      } else {
+        wantRef.current = false
+        setListening(false)
+      }
+    }
+    r.onend = () => {
+      if (recRef.current !== r) return
+      recRef.current = null
+      // Restart if user still wants to listen — mirrors continuous:true behaviour
+      if (wantRef.current) setTimeout(launch, 100)
+      else setListening(false)
+    }
+    try {
+      r.start()
+      recRef.current = r
+    } catch {
+      wantRef.current = false
+      setListening(false)
+    }
+  }
 
   const toggle = () => {
     if (listening) {
-      recRef.current?.stop()
+      wantRef.current = false
+      try { recRef.current?.stop() } catch {}
+      recRef.current = null
       setListening(false)
       return
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
-
-    const r = new SR()
-    r.continuous = true
-    r.interimResults = true
-    r.lang = 'en-US'
-    finalRef.current = value
-
-    r.onresult = (e) => {
-      let interim = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
-        else interim += e.results[i][0].transcript
-      }
-      onChange(finalRef.current + interim)
-    }
-    r.onerror = () => setListening(false)
-    r.onend   = () => setListening(false)
-    r.start()
-    recRef.current = r
+    finalRef.current = value || ''
+    wantRef.current  = true
     setListening(true)
+    launch()
   }
 
   return (
@@ -912,26 +947,78 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
     }
   }
 
-  const toggleMic = () => {
-    if (listening) { recRef.current?.stop(); setListening(false); return }
+  const coachWantRef = useRef(false)
+
+  const launchCoachMic = () => {
+    if (!coachWantRef.current) return
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
+    if (!SR) return
+    try { recRef.current?.stop() } catch {}
+    recRef.current = null
+
     const r = new SR()
-    r.continuous = true; r.interimResults = true; r.lang = 'en-US'
-    finalRef.current = input
+    r.continuous     = false  // continuous:true is unreliable on iOS Safari
+    r.interimResults = true
+    r.lang           = 'en-US'
+
     r.onresult = (e) => {
-      let interim = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalRef.current += e.results[i][0].transcript + ' '
+      if (recRef.current !== r) return
+      let finalText = '', interim = ''
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' '
         else interim += e.results[i][0].transcript
       }
-      setInput(finalRef.current + interim)
+      if (finalText) finalRef.current += finalText
+      setInput((finalRef.current + interim).trim())
     }
-    r.onerror = () => setListening(false)
-    r.onend   = () => setListening(false)
-    r.start(); recRef.current = r; setListening(true)
+    r.onerror = (e) => {
+      if (recRef.current !== r) return
+      recRef.current = null
+      if (e.error === 'no-speech' && coachWantRef.current) {
+        setTimeout(launchCoachMic, 100)
+      } else {
+        coachWantRef.current = false
+        setListening(false)
+      }
+    }
+    r.onend = () => {
+      if (recRef.current !== r) return
+      recRef.current = null
+      if (coachWantRef.current) setTimeout(launchCoachMic, 100)
+      else setListening(false)
+    }
+    try {
+      r.start()
+      recRef.current = r
+    } catch {
+      coachWantRef.current = false
+      setListening(false)
+    }
   }
-  const stopMic = () => { if (listening) { recRef.current?.stop(); setListening(false) } }
+
+  const toggleMic = () => {
+    if (listening) {
+      coachWantRef.current = false
+      try { recRef.current?.stop() } catch {}
+      recRef.current = null
+      setListening(false)
+      return
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
+    finalRef.current = input || ''
+    coachWantRef.current = true
+    setListening(true)
+    launchCoachMic()
+  }
+  const stopMic = () => {
+    if (listening) {
+      coachWantRef.current = false
+      try { recRef.current?.stop() } catch {}
+      recRef.current = null
+      setListening(false)
+    }
+  }
 
   const send = async () => {
     const text = input.trim()
@@ -1444,6 +1531,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [ttsError,  setTtsError]  = useState(null)   // null = ok, string = error message to show
+  // After TTS ends, iOS needs ~350ms to release the audio session before the mic can acquire it.
+  // readyToSpeak prevents the "Tap to speak" button appearing until iOS is ready.
+  const [readyToSpeak, setReadyToSpeak] = useState(true)
+  // Opening line needs a user-gesture tap on iOS before audio can play.
+  // If voice is on and there's an opening line, show a "Tap to begin" button first.
+  const hasOpeningLine = !!(voiceEnabled && session?.scenarioData?.opening_line && !(session?.messages?.length > 0))
+  const [needsOpeningTap, setNeedsOpeningTap] = useState(hasOpeningLine)
   const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
   const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
   const autoRestartMicRef = useRef(false)  // unused — kept to avoid ref churn
@@ -1551,6 +1645,10 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         // the microphone cannot acquire it on the next turn.
         el.src = ''
         el.load()
+        // Block "Tap to speak" for 350ms while iOS switches audio session
+        // from playback → record. Without this gap the mic starts but captures nothing.
+        setReadyToSpeak(false)
+        setTimeout(() => setReadyToSpeak(true), 350)
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -1579,15 +1677,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     }
   }
 
-  // Auto-speak the opening line when session starts fresh (voice mode only)
-  useEffect(() => {
-    if (voiceEnabled && session?.scenarioData?.opening_line && !(session?.messages?.length > 0)) {
-      const t = setTimeout(() => {
-        speak(session.scenarioData.opening_line, session.scenarioData.voice || 'onyx')
-      }, 700)
-      return () => clearTimeout(t)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Opening line is triggered by user tap (handleBegin) to satisfy iOS audio unlock requirement.
+  // If voice is off, or session is being resumed, no tap needed — opening line already in chat.
 
   // Note: mic is fully manual — user taps "Tap to speak" after AI finishes.
   // No auto-restart: the idle "Tap to speak" button is shown as soon as isPlaying → false.
@@ -1658,6 +1749,13 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       wantListeningRef.current = false
       setListening(false)
     }
+  }
+
+  // Called when user taps "Tap to hear the opening" — satisfies iOS audio gesture requirement
+  const handleBegin = () => {
+    unlockAudio()
+    setNeedsOpeningTap(false)
+    speak(session.scenarioData.opening_line, session.scenarioData.voice || 'onyx')
   }
 
   const toggleMic = () => {
@@ -2076,6 +2174,24 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
               /* Waiting for AI */
               <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, margin: '8px 0', fontStyle: 'italic' }}>
                 Getting into character…
+              </p>
+            ) : needsOpeningTap ? (
+              /* First tap — unlocks iOS audio and plays opening line */
+              <button
+                onClick={handleBegin}
+                style={{
+                  background: C.bg, border: `2px solid ${C.blue}`,
+                  borderRadius: 40, padding: '12px 28px',
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.blue,
+                }}
+              >
+                ▶ Tap to hear the opening
+              </button>
+            ) : !readyToSpeak ? (
+              /* iOS releasing audio session after TTS — brief pause before mic is available */
+              <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, margin: '8px 0' }}>
+                …
               </p>
             ) : (
               /* Idle — tap to speak */
