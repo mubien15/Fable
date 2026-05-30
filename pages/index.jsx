@@ -3506,7 +3506,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
       body: JSON.stringify({
         mode: 'scenario-debrief',
         conversationHistory: messages,
-        scenario: { title: scenario.title, coaching_focus: scenario.coaching_focus || [] },
+        scenario: { title: scenario.title, challenge: scenario.challenge || '', coaching_focus: scenario.coaching_focus || [] },
       }),
     })
       .then((r) => r.json())
@@ -3517,11 +3517,13 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
         setDebrief({
           overall_rating: 3,
           overall_summary: 'You completed the simulation. Review the conversation above to identify your strongest and weakest moments.',
-          what_landed: 'You engaged with the scenario.',
-          what_created_friction: 'Some responses could have been sharper.',
+          what_landed: { observation: 'You engaged with the scenario and kept the conversation going.', quote: '', why_it_works: 'Staying present in a difficult conversation is the foundation of everything else.' },
+          what_created_friction: { observation: 'Some responses could have been sharper and more direct.', quote: '', impact: 'Vague language gives the counterpart room to dismiss your points.' },
+          the_pattern: 'Review the transcript for a habit that repeated across your exchanges.',
           try_this_instead: 'Focus on one specific improvement for your next attempt.',
           the_principle: 'Precision earns credibility.',
           focus_scores: focusScores,
+          speech_observations: { filler_phrases: [], hedging_language: [], strong_moments: [] },
           next_challenge: 'Try the next difficulty level.',
         })
       })
@@ -3574,10 +3576,94 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
             {debrief.overall_summary}
           </p>
 
-          {/* Section cards */}
-          <SectionCard label="What landed" content={debrief.what_landed} bg={C.tealBg} border="#A7F3D0" labelColor={C.teal} />
-          <SectionCard label="What created friction" content={debrief.what_created_friction} bg={C.coralBg} border={C.coralDim} labelColor={C.coral} />
-          <SectionCard label="Try this instead" content={debrief.try_this_instead} bg={C.blueBg} border={C.blueDim} labelColor={C.blue} />
+          {/* What landed */}
+          <Card bg={C.tealBg} border="#A7F3D0" style={{ marginBottom: 12 }}>
+            <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.teal, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>What landed</p>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 14, lineHeight: 1.65 }}>
+              {typeof debrief.what_landed === 'string' ? debrief.what_landed : debrief.what_landed?.observation}
+            </p>
+            {debrief.what_landed?.quote && (
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: C.inkMid, borderLeft: `3px solid ${C.teal}`, paddingLeft: 12, margin: '10px 0' }}>
+                "{debrief.what_landed.quote}"
+              </p>
+            )}
+            {debrief.what_landed?.why_it_works && (
+              <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>{debrief.what_landed.why_it_works}</p>
+            )}
+          </Card>
+
+          {/* What created friction */}
+          <Card bg={C.coralBg} border={C.coralDim} style={{ marginBottom: 12 }}>
+            <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.coral, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>What created friction</p>
+            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 14, lineHeight: 1.65 }}>
+              {typeof debrief.what_created_friction === 'string' ? debrief.what_created_friction : debrief.what_created_friction?.observation}
+            </p>
+            {debrief.what_created_friction?.quote && (
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: C.inkMid, borderLeft: `3px solid ${C.coral}`, paddingLeft: 12, margin: '10px 0' }}>
+                "{debrief.what_created_friction.quote}"
+              </p>
+            )}
+            {debrief.what_created_friction?.impact && (
+              <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12, lineHeight: 1.5, marginTop: 6 }}>{debrief.what_created_friction.impact}</p>
+            )}
+          </Card>
+
+          {/* The pattern */}
+          {debrief.the_pattern && (
+            <Card bg={C.blueBg} border={C.blueDim} style={{ marginBottom: 12 }}>
+              <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.blue, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>The Pattern</p>
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: C.blueDeep, lineHeight: 1.65 }}>"{debrief.the_pattern}"</p>
+            </Card>
+          )}
+
+          {/* Try this instead */}
+          <SectionCard label="Try this instead" content={debrief.try_this_instead} bg={C.surface} border={C.border} labelColor={C.inkSoft} />
+
+          {/* Speech observations */}
+          {debrief.speech_observations && (
+            (() => {
+              const so = debrief.speech_observations
+              const hasFillers  = so.filler_phrases?.length > 0
+              const hasHedging  = so.hedging_language?.length > 0
+              const hasStrong   = so.strong_moments?.length > 0
+              if (!hasFillers && !hasHedging && !hasStrong) return null
+              return (
+                <Card bg={C.surface} border={C.border} style={{ marginBottom: 12 }}>
+                  <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 12 }}>Speech Patterns</p>
+                  {hasFillers && (
+                    <div style={{ marginBottom: 10 }}>
+                      <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6 }}>Filler phrases detected</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {so.filler_phrases.map((p, i) => (
+                          <span key={i} style={{ fontFamily: SANS, fontSize: 12, padding: '4px 10px', borderRadius: 20, background: C.coralBg, color: C.coral }}>"{p}"</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {hasHedging && (
+                    <div style={{ marginBottom: 10 }}>
+                      <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6 }}>Hedging language</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {so.hedging_language.map((p, i) => (
+                          <span key={i} style={{ fontFamily: SANS, fontSize: 12, padding: '4px 10px', borderRadius: 20, background: C.coralBg, color: C.coral }}>"{p}"</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {hasStrong && (
+                    <div>
+                      <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 6 }}>Strong moments</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {so.strong_moments.map((p, i) => (
+                          <span key={i} style={{ fontFamily: SANS, fontSize: 12, padding: '4px 10px', borderRadius: 20, background: C.tealBg, color: C.teal }}>"{p}"</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              )
+            })()
+          )}
 
           {/* The principle */}
           {debrief.the_principle && (

@@ -131,39 +131,67 @@ export default async function handler(req, res) {
     if (mode === 'scenario-debrief') {
       const { conversationHistory, scenario: scen } = req.body
 
-      const filtered  = (conversationHistory || []).filter((m) => m.role !== 'hint')
-      const convoText = filtered.map((m) =>
+      const filtered     = (conversationHistory || []).filter((m) => m.role !== 'hint')
+      const convoText    = filtered.map((m) =>
         `${m.role === 'user' ? 'PRACTITIONER' : 'COUNTERPART'}: ${m.content}`
       ).join('\n\n')
+      const userMessages = filtered
+        .filter((m) => m.role === 'user')
+        .map((m, i) => `[${i + 1}] "${m.content}"`)
+        .join('\n')
 
-      const focusItems   = scen?.coaching_focus || []
-      const focusLines   = focusItems.map((f) => `"${f}": <integer 1-5>`).join(',\n    ')
+      const focusItems = scen?.coaching_focus || []
+      const focusLines = focusItems.map((f) => `"${f}": <integer 1-5>`).join(',\n    ')
 
       const debriefResponse = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1000,
-        system: `You are a senior communication coach reviewing a professional role-play simulation. Be specific to what actually happened — do not give generic advice. Return valid JSON only, no markdown, no preamble.`,
+        max_tokens: 1500,
+        system: `You are a senior communication coach reviewing a professional role-play simulation. Be specific to what actually happened — quote exact words. Return valid JSON only, no markdown, no preamble.`,
         messages: [{
           role: 'user',
           content: `Scenario: ${scen?.title || 'Professional conversation'}
-
+What makes this hard: ${scen?.challenge || 'navigating a high-stakes professional conversation'}
 Coaching focus areas: ${focusItems.join(', ')}
 
-Simulation transcript:
+Full conversation:
 ${convoText}
 
-Return this exact JSON structure — no extra keys, no markdown:
+Practitioner's messages (for analysis):
+${userMessages}
+
+---
+Your job is to give feedback that is:
+- SPECIFIC: quote exact words or phrases the practitioner used
+- HONEST: do not inflate scores or soften observations to be kind
+- ACTIONABLE: every piece of feedback includes something they can do differently
+- PROFESSIONAL: speak as a respected senior mentor, not a motivational coach
+
+Return ONLY valid JSON in this exact structure — no extra keys, no markdown:
 {
   "overall_rating": <integer 1-5>,
-  "overall_summary": "<2-3 sentences on overall performance — specific to this conversation>",
-  "what_landed": "<1-2 sentences on what worked — cite specific moments or approaches from the transcript>",
-  "what_created_friction": "<1-2 sentences on what held them back — specific, not generic>",
-  "try_this_instead": "<1-2 sentences of a concrete alternative approach they could try next time>",
-  "the_principle": "<One memorable coaching principle this conversation illustrates — 1 sentence>",
+  "overall_summary": "<2 sentences — specific to what defined this conversation>",
+  "what_landed": {
+    "observation": "<what specifically worked>",
+    "quote": "<exact words from their messages that demonstrate this>",
+    "why_it_works": "<one sentence on why this approach is effective professionally>"
+  },
+  "what_created_friction": {
+    "observation": "<what specifically weakened their position>",
+    "quote": "<exact words from their messages that demonstrate this>",
+    "impact": "<one sentence on how this would land in a real conversation>"
+  },
+  "the_pattern": "<one sentence naming a repeating habit noticed across multiple exchanges — good or bad>",
+  "try_this_instead": "<concrete alternative — write it as actual dialogue they could have used>",
+  "the_principle": "<one transferable communication principle from this session — make it memorable>",
   "focus_scores": {
     ${focusLines}
   },
-  "next_challenge": "<One sentence suggesting what to practise next>"
+  "speech_observations": {
+    "filler_phrases": [<list any filler phrases: "I just wanted to", "sort of", "kind of", "basically" — empty array if none>],
+    "hedging_language": [<list any hedging: "maybe", "perhaps", "I'm not sure but", "it might be" — empty array if none>],
+    "strong_moments": [<list 1-2 specific phrases that were particularly effective — empty array if none>]
+  },
+  "next_challenge": "<specific recommendation — name the scenario type and difficulty level>"
 }`,
         }],
       })
@@ -178,11 +206,13 @@ Return this exact JSON structure — no extra keys, no markdown:
         return res.json({
           overall_rating: 3,
           overall_summary: 'You completed the simulation — that takes practice. Review the transcript and look for moments where more specificity or directness could have shifted the dynamic.',
-          what_landed: 'You engaged with the scenario and kept the conversation moving forward.',
-          what_created_friction: 'Some responses could have been more precise or evidence-based.',
+          what_landed: { observation: 'You engaged with the scenario and kept the conversation moving forward.', quote: '', why_it_works: 'Staying present in a difficult conversation is the foundation of everything else.' },
+          what_created_friction: { observation: 'Some responses could have been more precise or evidence-based.', quote: '', impact: 'Vague language gives the counterpart room to dismiss or deflect your points.' },
+          the_pattern: 'Review the transcript for a repeating habit — it will be visible across multiple exchanges.',
           try_this_instead: 'Lead with the specific observation before your interpretation — it makes the message harder to dismiss.',
           the_principle: 'Specificity builds credibility — vague language invites vague responses.',
           focus_scores: focusScores,
+          speech_observations: { filler_phrases: [], hedging_language: [], strong_moments: [] },
           next_challenge: 'Try the same scenario at a higher difficulty level and focus on your opening move.',
         })
       }
@@ -258,7 +288,7 @@ Write a 2-3 sentence personalised communication profile. Be specific to these pa
     if (mode === 'coach-debrief')   return res.json({ insight: 'Something shifted in this conversation — give yourself time to sit with it.', nextStep: 'Notice what came up and let it settle before deciding what to do next.' })
     if (mode === 'simulation')      return res.json({ reply: "Let's pick this up again in a moment." })
     if (mode === 'simulation-hint') return res.json({ hint: 'Take a breath and focus on what you observed — lead with evidence, not interpretation.' })
-    if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: '', what_created_friction: '', try_this_instead: '', the_principle: '', focus_scores: {}, next_challenge: '' })
+    if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: { observation: '', quote: '', why_it_works: '' }, what_created_friction: { observation: '', quote: '', impact: '' }, the_pattern: '', try_this_instead: '', the_principle: '', focus_scores: {}, speech_observations: { filler_phrases: [], hedging_language: [], strong_moments: [] }, next_challenge: '' })
     if (mode === 'profile')         return res.json({ profile: null })
     if (mode === 'pattern')         return res.json({ pattern: 'Keep practising — patterns emerge over time.' })
     return res.status(200).json(FALLBACK)
