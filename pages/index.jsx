@@ -100,11 +100,12 @@ function getDailyRepScenario(day) {
 // STORAGE HELPERS
 // ═══════════════════════════════════════════════
 const LS = {
-  user:      'fable_user',
-  sessions:  'fable_sessions',
-  storylab:  'fable_storylab',  // kept for migration awareness
-  dailyRep:  'fable_daily_rep',
-  completed: 'completedScenarios',
+  user:          'fable_user',
+  sessions:      'fable_sessions',
+  storylab:      'fable_storylab',  // kept for migration awareness
+  dailyRep:      'fable_daily_rep',
+  completed:     'completedScenarios',
+  completedData: 'fable_completed_data',  // rich per-scenario debrief data
 }
 
 function lsGet(key, fallback) {
@@ -2174,120 +2175,430 @@ function ShareScreen({ session, setScreen }) {
 // ═══════════════════════════════════════════════
 // PROGRESS SCREEN
 // ═══════════════════════════════════════════════
-function ProgressScreen({ sessions, setScreen }) {
-  const [pattern, setPattern] = useState('')
-  const [loadingPattern, setLoadingPattern] = useState(false)
-  const scenarios = new Set(sessions.map((s) => s.scenario)).size
-  const days = new Set(sessions.map((s) => s.date)).size
+// ═══════════════════════════════════════════════
+// PROGRESS — HELPER FUNCTIONS
+// ═══════════════════════════════════════════════
+
+function isoWeekNumber(date) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7))
+  const y = new Date(d.getFullYear(), 0, 1)
+  return Math.ceil((((d - y) / 86400000) + 1) / 7)
+}
+
+function sessionTrack(scenarioId) {
+  if (!scenarioId) return null
+  if (scenarioId.startsWith('audit'))       return 'audit'
+  if (scenarioId.startsWith('consulting'))  return 'consulting'
+  if (scenarioId === 'leadership-compensation') return 'career'
+  if (scenarioId.startsWith('career'))      return 'career'
+  if (scenarioId.startsWith('leadership'))  return 'leadership'
+  return null
+}
+
+function useProgressData(sessions, dailyRep, completedData) {
+  const cdObj = completedData || {}
+
+  // Only count proper scenario sessions (not storylab / coach)
+  const scenSessions = sessions.filter(
+    s => s.completed && s.scenario && !s.scenario.startsWith('daily-rep-day') && s.scenario !== 'storylab'
+  )
+
+  const totalReps       = sessions.filter(s => s.completed).length
+  const thirtyDaysAgo   = Date.now() - 30 * 24 * 60 * 60 * 1000
+  const repsThisMonth   = sessions.filter(s => s.id > thirtyDaysAgo && s.completed).length
+
+  // Ratings from saved debriefs
+  const ratings = Object.values(cdObj).map(s => s.debrief?.overall_rating).filter(Boolean)
+  const avgRating = ratings.length
+    ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
+    : null
+
+  // Track breakdown
+  const trackCounts = { audit: 0, consulting: 0, leadership: 0, career: 0 }
+  scenSessions.forEach(s => {
+    const t = sessionTrack(s.scenario)
+    if (t) trackCounts[t]++
+  })
+  const mostPracticed  = Object.entries(trackCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
+  const leastPracticed = Object.entries(trackCounts).sort((a, b) => a[1] - b[1])[0]?.[0]
+
+  // Focus scores aggregated across all debriefs
+  const focusMap = {}
+  Object.values(cdObj).forEach(s => {
+    if (!s.debrief?.focus_scores) return
+    Object.entries(s.debrief.focus_scores).forEach(([area, score]) => {
+      if (typeof score !== 'number' || score <= 0) return
+      ;(focusMap[area] = focusMap[area] || []).push(score)
+    })
+  })
+  const avgFocusScores = Object.entries(focusMap)
+    .map(([area, scores]) => ({
+      area,
+      avg: scores.reduce((a, b) => a + b, 0) / scores.length,
+      count: scores.length,
+    }))
+    .sort((a, b) => b.avg - a.avg)
+
+  const strengths = avgFocusScores.slice(0, 2)
+  const develop   = [...avgFocusScores].slice(-2).reverse().filter(f => f.avg < 4)
+
+  // Lowest-rated completed scenario → next challenge
+  const hardest = Object.entries(cdObj)
+    .filter(([, s]) => s.debrief?.overall_rating)
+    .sort((a, b) => a[1].debrief.overall_rating - b[1].debrief.overall_rating)[0]
+
+  // Weekly activity for growth chart (keyed by ISO year-week)
+  const byWeek = {}
+  sessions.filter(s => s.completed && s.id).forEach(s => {
+    const d = new Date(s.id)
+    const key = `${d.getFullYear()}-W${String(isoWeekNumber(d)).padStart(2, '0')}`
+    const wk  = byWeek[key] || (byWeek[key] = { sessions: 0, ratings: [] })
+    wk.sessions++
+    const cd  = cdObj[s.scenario]
+    if (cd?.debrief?.overall_rating) wk.ratings.push(cd.debrief.overall_rating)
+  })
+  const weeklyData = Object.entries(byWeek)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([week, wk]) => ({
+      week,
+      sessions: wk.sessions,
+      avgRating: wk.ratings.length
+        ? wk.ratings.reduce((a, b) => a + b, 0) / wk.ratings.length
+        : null,
+    }))
+
+  return {
+    totalReps, repsThisMonth, avgRating,
+    streak: dailyRep?.streak || 0,
+    longestStreak: dailyRep?.longestStreak || 0,
+    trackCounts, mostPracticed, leastPracticed,
+    strengths, develop, hardest,
+    avgFocusScores, weeklyData,
+    hasRatings:      ratings.length > 0,
+    hasEnoughForProfile: totalReps >= 3,
+  }
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function FocusBar({ area, avg, type }) {
+  const pct   = Math.round((avg / 5) * 100)
+  const color = type === 'strength' ? C.blueDeep : C.coral
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+        <p style={{ fontFamily: SERIF, color: C.inkMid, fontSize: 13, lineHeight: 1.4, flex: 1, marginRight: 10 }}>{area}</p>
+        <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 12, color, flexShrink: 0 }}>{avg.toFixed(1)}</span>
+      </div>
+      <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4, transition: 'width .6s ease' }} />
+      </div>
+    </div>
+  )
+}
+
+function TrackBreakdown({ trackCounts }) {
+  const total  = Object.values(trackCounts).reduce((a, b) => a + b, 0) || 1
+  const tracks = [
+    { id: 'audit',       label: 'Audit & Compliance',       icon: '🔍', color: C.blueDeep },
+    { id: 'consulting',  label: 'Consulting & Client Work',  icon: '💼', color: C.coral    },
+    { id: 'career',      label: 'Career & Self-Advocacy',    icon: '🚀', color: '#7C4DFF'  },
+    { id: 'leadership',  label: 'People Leadership',         icon: '🤝', color: C.teal     },
+  ]
+  return (
+    <div style={{ marginBottom: 28 }}>
+      {tracks.map(t => (
+        <div key={t.id} style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid }}>{t.icon} {t.label}</p>
+            <span style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint }}>{trackCounts[t.id]}</span>
+          </div>
+          <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 4, background: t.color, transition: 'width .6s ease',
+              width: `${(trackCounts[t.id] / total) * 100}%`,
+              minWidth: trackCounts[t.id] > 0 ? 4 : 0,
+            }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function GrowthChart({ weeklyData, hasRatings }) {
+  if (weeklyData.length < 2) {
+    return (
+      <div style={{ background: C.surfaceSubtle, borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 28 }}>
+        <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, fontStyle: 'italic', lineHeight: 1.6 }}>
+          Complete sessions across multiple weeks to see your growth trend here.
+        </p>
+      </div>
+    )
+  }
+  const W = 320, H = 80, PAD = 12
+  const useRatings = hasRatings && weeklyData.some(w => w.avgRating !== null)
+  const values = weeklyData.map(w => useRatings ? (w.avgRating || 0) : w.sessions)
+  const maxVal  = useRatings ? 5 : Math.max(...values, 1)
+  const points  = weeklyData.map((_, i) => ({
+    x: PAD + (i / (weeklyData.length - 1)) * (W - PAD * 2),
+    y: H - PAD - ((values[i] / maxVal) * (H - PAD * 2)),
+  }))
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
+        {[1, 2, 3, 4, 5].map(v => {
+          const y = H - PAD - ((v / maxVal) * (H - PAD * 2))
+          return <line key={v} x1={PAD} y1={y.toFixed(1)} x2={W - PAD} y2={y.toFixed(1)} stroke={C.border} strokeWidth="1" />
+        })}
+        <path d={pathD} fill="none" stroke={C.blue} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x.toFixed(1)} cy={p.y.toFixed(1)} r="4" fill={C.coral} stroke={C.surface} strokeWidth="2" />
+        ))}
+      </svg>
+      <p style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', marginTop: 4 }}>
+        {useRatings ? 'Average rating per week' : 'Sessions per week'}
+      </p>
+    </div>
+  )
+}
+
+function NextChallengeCard({ hardest, openBriefing, setActiveTrack }) {
+  if (!hardest) return null
+  const [scenarioId, scenarioData] = hardest
+  const match = findTrackScenario(scenarioId)
+  if (!match) return null
+  const { scenario, track } = match
+  const rating = scenarioData.debrief?.overall_rating
+
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 12 }}>
+        Your Next Challenge
+      </p>
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '20px 22px' }}>
+        <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid, marginBottom: 10, lineHeight: 1.5 }}>
+          Based on your sessions, your biggest growth opportunity right now is:
+        </p>
+        <p style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 700, color: C.ink, marginBottom: rating ? 4 : 16 }}>
+          {scenario.title}
+        </p>
+        {rating && (
+          <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, marginBottom: 16 }}>
+            You've averaged {rating}/5 — try again on a harder difficulty
+          </p>
+        )}
+        <Btn onClick={() => { setActiveTrack(track); openBriefing(scenario) }}>
+          Practice now →
+        </Btn>
+      </div>
+    </div>
+  )
+}
+
+function ProgressSessionLog({ sessions, completedData }) {
+  const cdObj   = completedData || {}
+  const ordered = [...sessions].filter(s => s.completed).sort((a, b) => b.id - a.id).slice(0, 20)
+  if (ordered.length === 0) return null
+  return (
+    <div>
+      {ordered.map(s => {
+        const match  = findTrackScenario(s.scenario)
+        const icon   = match?.track.icon || (s.isDailyRep ? '🎯' : '💬')
+        const label  = match?.scenario.title || (s.isDailyRep ? `Day ${s.dailyRepDay} · Daily Rep` : s.scenario || 'Session')
+        const rating = cdObj[s.scenario]?.debrief?.overall_rating
+        const d      = new Date(s.id)
+        return (
+          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</p>
+              <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 11 }}>
+                {d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
+                {s.isDailyRep && ' · Daily Rep'}
+              </p>
+            </div>
+            {rating && (
+              <div style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <span key={n} style={{ fontSize: 11, color: n <= rating ? C.coral : C.border }}>★</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// PROGRESS SCREEN — MAIN DASHBOARD
+// ═══════════════════════════════════════════════
+function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack }) {
+  const progress = useProgressData(sessions, dailyRep, completedData)
+  const [profile,        setProfile]        = useState(null)
+  const [profileLoading, setProfileLoading] = useState(false)
 
   useEffect(() => {
-    if (sessions.length < 3 || pattern) return
-    setLoadingPattern(true)
-    const insights = sessions.slice(-3).map((s) => s.feedback?.coachNote).filter(Boolean)
-    if (insights.length < 2) { setLoadingPattern(false); return }
-
+    if (!progress.hasEnoughForProfile || profile !== null) return
+    setProfileLoading(true)
     fetch('/api/coaching', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'pattern', insights }),
+      body: JSON.stringify({
+        mode: 'profile',
+        progressData: {
+          totalReps:      progress.totalReps,
+          avgRating:      progress.avgRating,
+          strengths:      progress.strengths,
+          develop:        progress.develop,
+          mostPracticed:  progress.mostPracticed,
+          leastPracticed: progress.leastPracticed,
+          streak:         progress.streak,
+          hasRatings:     progress.hasRatings,
+        },
+      }),
     })
-      .then((r) => r.json())
-      .then((d) => setPattern(d.pattern || ''))
-      .catch(() => {})
-      .finally(() => setLoadingPattern(false))
-  }, [])
+      .then(r => r.json())
+      .then(d => setProfile(d.profile || null))
+      .catch(() => setProfile(null))
+      .finally(() => setProfileLoading(false))
+  }, [progress.hasEnoughForProfile])
+
+  const SL = ({ children }) => (
+    <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 12 }}>
+      {children}
+    </p>
+  )
+
+  // ── Empty state ────────────────────────────────────────────────────────────
+  if (progress.totalReps === 0) {
+    return (
+      <div className="fade-up" style={{ padding: '60px 28px 110px', textAlign: 'center' }}>
+        <div style={{ fontSize: 40, marginBottom: 20 }}>◈</div>
+        <h1 style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 600, color: C.ink, marginBottom: 12, lineHeight: 1.35 }}>
+          Your Progress
+        </h1>
+        <p style={{ fontFamily: SERIF, fontSize: 15, color: C.inkMid, lineHeight: 1.7, marginBottom: 8 }}>
+          Every rep you complete will build your communication profile here.
+        </p>
+        <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkSoft, lineHeight: 1.65, marginBottom: 32 }}>
+          Strengths. Patterns. Growth over time.<br />
+          The picture gets clearer the more you practise.
+        </p>
+        <Btn onClick={() => { setScreen('daily-rep') }}>Start your first rep →</Btn>
+      </div>
+    )
+  }
 
   return (
     <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
-      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 4 }}>Your progress</h1>
-      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, marginBottom: 24, lineHeight: 1.55 }}>
-        Every session, every rep, every reflection — tracked here.
+
+      {/* Header */}
+      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Progress</h1>
+      <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, marginBottom: 28, lineHeight: 1.55 }}>
+        Your communication intelligence
       </p>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
-        {[
-          { label: 'Sessions', val: sessions.length },
-          { label: 'Scenarios', val: scenarios },
-          { label: 'Days active', val: days },
-        ].map((s) => (
-          <Card key={s.label} style={{ textAlign: 'center', padding: '16px 10px' }}>
-            <p style={{ fontFamily: SERIF, color: C.coral, fontSize: 28, fontWeight: 600, marginBottom: 4, lineHeight: 1 }}>
-              {s.val}
-            </p>
-            <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 10, fontWeight: 700, letterSpacing: '.07em' }}>
-              {s.label.toUpperCase()}
-            </p>
-          </Card>
-        ))}
-      </div>
-
-      {/* Pattern observation */}
-      {(pattern || loadingPattern) && (
-        <Card bg={C.coralBg} border={C.coralDim} style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <CoachAvatar size={32} />
-            <div>
-              <p style={{ fontFamily: SANS, color: C.coral, fontSize: 11, fontWeight: 700, letterSpacing: '.06em', marginBottom: 6 }}>
-                YOUR COACH NOTICES
-              </p>
-              {loadingPattern ? (
-                <Dots />
-              ) : (
-                <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65, fontStyle: 'italic' }}>
-                  {pattern}
-                </p>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Session history */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 14 }}>
-          ALL SESSIONS
+      {/* ── Profile card ──────────────────────────────────────────────────── */}
+      <SL>Your Profile</SL>
+      <div style={{
+        background: C.surface, border: `1px solid ${C.border}`,
+        borderLeft: `4px solid ${C.coral}`, borderRadius: 16,
+        padding: '20px 22px', marginBottom: 28,
+      }}>
+        <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.coral, textTransform: 'uppercase', marginBottom: 10 }}>
+          Communication Profile
         </p>
-        {sessions.length === 0 ? (
-          <Card style={{ padding: '28px 20px' }}>
-            <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 17, fontWeight: 600, marginBottom: 8, lineHeight: 1.35 }}>
-              Your practice history starts here.
-            </p>
-            <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.65, marginBottom: 20 }}>
-              Complete your first scenario and it will appear here — along with your feedback, scores, and reflections over time.
-            </p>
-            <Btn onClick={() => setScreen('scenarios')}>Go to Scenarios →</Btn>
-          </Card>
+        {!progress.hasEnoughForProfile ? (
+          <p style={{ fontFamily: SERIF, fontSize: 14, color: C.inkSoft, fontStyle: 'italic', lineHeight: 1.65 }}>
+            Complete 3 or more sessions and your communication profile will appear here.
+          </p>
+        ) : profileLoading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Dots />
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkSoft }}>Building your profile…</p>
+          </div>
+        ) : profile ? (
+          <p style={{ fontFamily: SERIF, fontSize: 16, color: C.ink, lineHeight: 1.7, fontStyle: 'italic' }}>
+            {profile}
+          </p>
         ) : (
-          sessions.slice().reverse().map((s) => {
-            const trackMatch = findTrackScenario(s.scenario)
-            const chip = trackMatch
-              ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
-              : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: s.lifeAreaIcon || '💬', label: s.label || s.scenario || 'Session' }
-            return (
-              <div key={s.id} style={{
-                display: 'flex', gap: 12, padding: '14px 0', borderBottom: `1px solid ${C.border}`,
-                alignItems: 'flex-start',
-              }}>
-                <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{chip.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <p style={{ fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 700 }}>{chip.label}</p>
-                    <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>{s.date}</p>
-                  </div>
-                  {s.feedback?.coachNote && (
-                    <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 13, fontStyle: 'italic', lineHeight: 1.5 }}>
-                      {s.feedback.coachNote}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-          })
+          <p style={{ fontFamily: SERIF, fontSize: 14, color: C.inkSoft, fontStyle: 'italic', lineHeight: 1.65 }}>
+            Keep practising — your profile will sharpen with each session.
+          </p>
         )}
       </div>
 
-      {sessions.length > 0 && <Btn onClick={() => setScreen('scenarios')}>Find your next scenario →</Btn>}
+      {/* ── Stats row ─────────────────────────────────────────────────────── */}
+      <SL>This Month</SL>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 28 }}>
+        {[
+          { val: progress.repsThisMonth, label: 'Reps' },
+          { val: progress.avgRating ?? '—',  label: 'Avg Rating' },
+          { val: progress.streak,             label: 'Day Streak' },
+        ].map(s => (
+          <div key={s.label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 10px', textAlign: 'center' }}>
+            <p style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 6 }}>{s.val}</p>
+            <p style={{ fontFamily: SANS, fontSize: 10, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Strengths ─────────────────────────────────────────────────────── */}
+      {progress.strengths.length > 0 && (
+        <>
+          <SL>Your Strengths</SL>
+          <div style={{ marginBottom: 24 }}>
+            {progress.strengths.map(f => <FocusBar key={f.area} area={f.area} avg={f.avg} type="strength" />)}
+          </div>
+        </>
+      )}
+
+      {/* ── Develop ───────────────────────────────────────────────────────── */}
+      {progress.develop.length > 0 && (
+        <>
+          <SL>Areas to Develop</SL>
+          <div style={{ marginBottom: 24 }}>
+            {progress.develop.map(f => <FocusBar key={f.area} area={f.area} avg={f.avg} type="develop" />)}
+          </div>
+        </>
+      )}
+
+      {/* Placeholder when not enough debrief data */}
+      {progress.strengths.length === 0 && progress.develop.length === 0 && (
+        <>
+          <SL>Your Strengths</SL>
+          <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, fontStyle: 'italic', marginBottom: 24, lineHeight: 1.65 }}>
+            Complete a scenario debrief and your strength patterns will appear here.
+          </p>
+        </>
+      )}
+
+      {/* ── Track breakdown ───────────────────────────────────────────────── */}
+      <SL>Practice Breakdown</SL>
+      <TrackBreakdown trackCounts={progress.trackCounts} />
+
+      {/* ── Growth chart ──────────────────────────────────────────────────── */}
+      <SL>Growth Over Time</SL>
+      <GrowthChart weeklyData={progress.weeklyData} hasRatings={progress.hasRatings} />
+
+      {/* ── Next challenge ────────────────────────────────────────────────── */}
+      {progress.hardest && (
+        <NextChallengeCard
+          hardest={progress.hardest}
+          openBriefing={openBriefing}
+          setActiveTrack={setActiveTrack}
+        />
+      )}
+
+      {/* ── Session log ───────────────────────────────────────────────────── */}
+      <SL>All Sessions</SL>
+      <ProgressSessionLog sessions={sessions} completedData={completedData} />
     </div>
   )
 }
@@ -3306,7 +3617,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
             </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Btn onClick={() => { onMarkComplete(scenario?.id, reflection); setSaved(true) }}>
+              <Btn onClick={() => { onMarkComplete(scenario?.id, reflection, debrief); setSaved(true) }}>
                 Save & Mark Complete ✓
               </Btn>
               {nextDiff !== currentDiff && (
@@ -3363,21 +3674,26 @@ export default function App() {
   // Completed scenarios (from LS key 'completedScenarios')
   const [completedScenarios, setCompletedScenarios] = useState([])
 
+  // Rich per-scenario debrief data (focus scores, overall rating, etc.)
+  const [completedData, setCompletedData] = useState({})
+
   // Coach session state
   const [coachSession, setCoachSession] = useState(null)
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedUser       = lsGet(LS.user, null)
-    const savedSessions   = lsGet(LS.sessions, [])
-    const savedStorylab   = lsGet(LS.storylab, { currentDay: 1, completedDays: [] })
-    const savedDailyRep   = lsGet(LS.dailyRep, DAILY_REP_DEFAULTS)
-    const savedCompleted  = lsGet(LS.completed, [])
+    const savedUser          = lsGet(LS.user, null)
+    const savedSessions      = lsGet(LS.sessions, [])
+    const savedStorylab      = lsGet(LS.storylab, { currentDay: 1, completedDays: [] })
+    const savedDailyRep      = lsGet(LS.dailyRep, DAILY_REP_DEFAULTS)
+    const savedCompleted     = lsGet(LS.completed, [])
+    const savedCompletedData = lsGet(LS.completedData, {})
 
     setSessions(savedSessions)
     setStorylab(savedStorylab)
     setDailyRep(savedDailyRep)
     setCompletedScenarios(savedCompleted)
+    setCompletedData(savedCompletedData)
 
     if (savedUser?.onboarded) {
       setUser(savedUser)
@@ -3439,15 +3755,23 @@ export default function App() {
     setScreen('scenario-briefing')
   }
 
-  // Mark a scenario as completed and save reflection
-  const markScenarioComplete = (scenarioId, reflection) => {
+  // Mark a scenario as completed and save reflection + debrief data
+  const markScenarioComplete = (scenarioId, reflection, debrief) => {
     if (!scenarioId) return
     const updated = completedScenarios.includes(scenarioId)
       ? completedScenarios
       : [...completedScenarios, scenarioId]
     setCompletedScenarios(updated)
     lsSet(LS.completed, updated)
-    // Optionally store reflection alongside sessions — already done via session record
+
+    if (debrief) {
+      const updatedData = {
+        ...completedData,
+        [scenarioId]: { completedAt: Date.now(), reflection, debrief },
+      }
+      setCompletedData(updatedData)
+      lsSet(LS.completedData, updatedData)
+    }
   }
 
   // Start a Daily Rep scenario (mini or track — not user-choice)
@@ -3694,7 +4018,7 @@ export default function App() {
             completedScenarios={completedScenarios}
             onBack={() => setScreen('track-scenarios')}
             onTryAgain={(scenario, nextDiff) => openBriefing(scenario, nextDiff)}
-            onMarkComplete={(scenarioId, reflection) => markScenarioComplete(scenarioId, reflection)}
+            onMarkComplete={(scenarioId, reflection, debrief) => markScenarioComplete(scenarioId, reflection, debrief)}
           />
         )
 
@@ -3702,7 +4026,16 @@ export default function App() {
         return <ShareScreen session={currentSession} setScreen={setScreen} />
 
       case 'progress':
-        return <ProgressScreen sessions={sessions} setScreen={setScreen} />
+        return (
+          <ProgressScreen
+            sessions={sessions}
+            setScreen={setScreen}
+            dailyRep={dailyRep}
+            completedData={completedData}
+            openBriefing={openBriefing}
+            setActiveTrack={setActiveTrack}
+          />
+        )
 
       case 'daily-rep':
         return (

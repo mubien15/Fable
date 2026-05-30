@@ -188,6 +188,34 @@ Return this exact JSON structure — no extra keys, no markdown:
       }
     }
 
+    // ── Communication profile — personalised 2-3 sentence summary ────────
+    if (mode === 'profile') {
+      const { progressData } = req.body
+      const strengths = (progressData?.strengths || []).map(s => `${s.area} (${Number(s.avg).toFixed(1)}/5)`).join(', ')
+      const develop   = (progressData?.develop   || []).map(s => `${s.area} (${Number(s.avg).toFixed(1)}/5)`).join(', ')
+
+      const response = await client.messages.create({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 200,
+        system: `You are a communication coach writing a brief, honest, personalised profile for a professional based on their practice data. Write in second person ("You..."). Be specific, direct, and constructive — no generic praise. Reference actual patterns. Return only the profile text, no preamble.`,
+        messages: [{
+          role: 'user',
+          content: `Practice data:
+- Total sessions completed: ${progressData?.totalReps || 0}
+- Average rating: ${progressData?.avgRating || 'n/a'}/5
+- Strongest focus areas: ${strengths || 'not yet determined'}
+- Areas to develop: ${develop || 'not yet determined'}
+- Most practised track: ${progressData?.mostPracticed || 'n/a'}
+- Least practised track: ${progressData?.leastPracticed || 'n/a'}
+- Current streak: ${progressData?.streak || 0} days
+
+Write a 2-3 sentence personalised communication profile. Be specific to these patterns.`,
+        }],
+      })
+
+      return res.json({ profile: response.content[0].text.trim() })
+    }
+
     // ── Pattern: analyse recent sessions ─────────────────────────────────
     if (mode === 'pattern') {
       const response = await client.messages.create({
@@ -231,6 +259,7 @@ Return this exact JSON structure — no extra keys, no markdown:
     if (mode === 'simulation')      return res.json({ reply: "Let's pick this up again in a moment." })
     if (mode === 'simulation-hint') return res.json({ hint: 'Take a breath and focus on what you observed — lead with evidence, not interpretation.' })
     if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: '', what_created_friction: '', try_this_instead: '', the_principle: '', focus_scores: {}, next_challenge: '' })
+    if (mode === 'profile')         return res.json({ profile: null })
     if (mode === 'pattern')         return res.json({ pattern: 'Keep practising — patterns emerge over time.' })
     return res.status(200).json(FALLBACK)
   }
