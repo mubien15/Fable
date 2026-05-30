@@ -1679,6 +1679,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
   const scrollDown = () => setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 80)
 
+  const DEBRIEF_TRIGGERS = ['feedback', 'done', 'end session', "that's enough", 'finish', 'wrap up', 'debrief']
+  const wantsDebrief = (msg) => DEBRIEF_TRIGGERS.some((t) => msg.toLowerCase().includes(t))
+
   const send = async () => {
     unlockAudio()  // satisfy iOS gesture requirement — must be called synchronously on tap
     const text = input.trim()
@@ -1691,6 +1694,37 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     setInput('')
     setLoading(true)
     scrollDown()
+
+    // ── User-triggered debrief ───────────────────────────────────────────
+    if (wantsDebrief(text) && turn >= 2) {
+      try {
+        const conversationHistory = next.filter((m) => m.role !== 'coach')
+        const res = await fetch('/api/coaching', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'scenario-debrief',
+            scenario: session?.scenarioData || session?.context,
+            conversationHistory,
+          }),
+        })
+        const debrief = await res.json()
+        const summary = debrief.overall_summary || 'Session complete — good work showing up to practise.'
+        const finalMsgs = [...next, { role: 'coach', content: summary }]
+        setMessages(finalMsgs)
+        setDone(true)
+        onSaveMessages?.(finalMsgs)
+        if (voiceEnabled) stopSpeaking()
+      } catch {
+        const finalMsgs = [...next, { role: 'coach', content: 'Session ended. Review the conversation above for your key moments.' }]
+        setMessages(finalMsgs)
+        setDone(true)
+      } finally {
+        setLoading(false)
+        scrollDown()
+      }
+      return
+    }
 
     try {
       const history = next
