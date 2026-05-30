@@ -106,6 +106,7 @@ const LS = {
   dailyRep:      'fable_daily_rep',
   completed:     'completedScenarios',
   completedData: 'fable_completed_data',  // rich per-scenario debrief data
+  prefs:         'fable_prefs',           // cross-session user preferences
 }
 
 function lsGet(key, fallback) {
@@ -1167,12 +1168,14 @@ function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) 
 function PracticeScreen({ session, setScreen, onFeedback, user }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState(false)
 
   const chip = SCENARIO_CHIPS.find((c) => c.id === session?.scenario)
 
   const submit = async () => {
     if (text.trim().length < 10 || loading) return
     setLoading(true)
+    setSubmitError(false)
     try {
       const res = await fetch('/api/coaching', {
         method: 'POST',
@@ -1188,7 +1191,7 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
       onFeedback({ feedback: data, userMessage: text.trim() })
       setScreen('feedback')
     } catch {
-      alert('Something went wrong — try again.')
+      setSubmitError(true)
     } finally {
       setLoading(false)
     }
@@ -1231,6 +1234,13 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
         {text.length} characters · aim for at least a sentence or two
       </p>
 
+      {submitError && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
+          <p style={{ fontFamily: SANS, fontSize: 13, color: '#B91C1C', lineHeight: 1.5 }}>
+            The coach took too long to respond — tap below to try again.
+          </p>
+        </div>
+      )}
       {loading ? (
         <Card style={{ textAlign: 'center', padding: '20px' }}>
           <Dots />
@@ -1429,12 +1439,14 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     session?.messages?.slice(1).some((m) => m.role === 'coach') || false
   )
   const [listening, setListening] = useState(false)
+  const [sendError, setSendError] = useState(false)  // true = last API call failed, show retry
   // ── Voice mode ──────────────────────────────────────────────────────────────
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [ttsError,  setTtsError]  = useState(null)   // null = ok, string = error message to show
   const audioElRef        = useRef(null)   // single persistent <audio> element (pre-unlocked)
   const audioBlobUrlRef   = useRef(null)   // current blob URL (for cleanup)
+  const autoRestartMicRef = useRef(false)  // set true by speak().onended to trigger mic restart
   // ────────────────────────────────────────────────────────────────────────────
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -1539,6 +1551,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         // the microphone cannot acquire it on the next turn.
         el.src = ''
         el.load()
+        // Signal the mic auto-restart effect — checked against voiceEnabled/done state there
+        autoRestartMicRef.current = true
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -1576,6 +1590,23 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       return () => clearTimeout(t)
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-restart mic after AI finishes speaking (voice mode only)
+  // 400ms delay lets iOS/Safari release the audio device before mic acquires it
+  useEffect(() => {
+    if (!isPlaying && autoRestartMicRef.current && voiceEnabled && !done && !loading) {
+      autoRestartMicRef.current = false
+      const t = setTimeout(() => {
+        if (wantListeningRef.current) return  // already listening
+        finalRef.current = ''
+        setInput('')
+        wantListeningRef.current = true
+        setListening(true)
+        launchRecognition()
+      }, 400)
+      return () => clearTimeout(t)
+    }
+  }, [isPlaying]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Speech recognition ─────────────────────────────────────────────────────
   // We use continuous:false (one utterance at a time) because Chrome has a
@@ -1687,6 +1718,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     const text = input.trim()
     if (!text || loading || done) return
     stopMic()
+    setSendError(false)
 
     const userMsg = { role: 'user', content: text }
     const next = [...messages, userMsg]
@@ -1769,7 +1801,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         speak(counterpartText, session?.scenarioData?.voice || 'onyx')
       }
     } catch {
-      setMessages((prev) => [...prev, { role: 'other', content: "Let's pick this up in a moment." }])
+      setSendError(true)
     } finally {
       setLoading(false)
       scrollDown()
@@ -1944,7 +1976,19 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       </div>
 
       {/* Input */}
-      <div style={{ borderTop: `1px solid ${C.border}`, background: C.surface, flexShrink: 0 }}>
+      <div style={{ borderTop: `1px solid ${C.border}`, background: C.surface, flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* API failure retry banner */}
+        {sendError && !done && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: '#FEF2F2', borderBottom: `1px solid #FECACA` }}>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: '#B91C1C', lineHeight: 1.4 }}>
+              The AI took too long to respond — tap to try again.
+            </p>
+            <button
+              onClick={() => { setSendError(false); send() }}
+              style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 12, fontWeight: 700, color: '#B91C1C', flexShrink: 0, paddingLeft: 10 }}
+            >↺ Retry</button>
+          </div>
+        )}
         {!done && (
           <div style={{ textAlign: 'center', paddingTop: 8, paddingBottom: 2 }}>
             <button
@@ -3343,7 +3387,16 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
 // ═══════════════════════════════════════════════
 function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStart, onBack }) {
   const [difficulty, setDifficulty] = useState(initialDifficulty || scenario?.difficulty_default || 'medium')
-  const [voiceEnabled, setVoiceEnabled] = useState(true)  // default: voice conversation
+  // Default voice on; remembers last choice across sessions
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    const prefs = lsGet(LS.prefs, {})
+    return prefs.voiceEnabled !== false  // default true if never set
+  })
+  const saveVoicePref = (val) => {
+    setVoiceEnabled(val)
+    const prefs = lsGet(LS.prefs, {})
+    lsSet(LS.prefs, { ...prefs, voiceEnabled: val })
+  }
 
   if (!scenario) return null
 
@@ -3457,7 +3510,7 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
         ].map((opt) => (
           <button
             key={String(opt.id)}
-            onClick={() => setVoiceEnabled(opt.id)}
+            onClick={() => saveVoicePref(opt.id)}
             style={{
               flex: 1, padding: '10px 8px', borderRadius: 12,
               border: `1.5px solid ${voiceEnabled === opt.id ? C.blue : C.border}`,
@@ -3566,7 +3619,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
       {loading ? (
         <div style={{ padding: '48px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
           <Dots />
-          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 14 }}>Analysing your conversation…</p>
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 14 }}>Reading your conversation…</p>
         </div>
       ) : debrief ? (
         <>
