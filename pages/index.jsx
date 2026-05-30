@@ -1568,15 +1568,22 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     el.play().catch(() => {})
   }
 
-  const stopSpeaking = () => {
+  // releaseForMic: true when called by user gesture (interrupt / session end).
+  // Clears el.src so iOS releases the "playback" audio session before the mic starts.
+  // Safe because speak() is always async — the stale src='' error fires during
+  // the await fetch/blob gap, before the next el.onerror handler is attached.
+  const stopSpeaking = (releaseForMic = false) => {
     const el = audioElRef.current
     if (el) {
       el.onended = null
       el.onerror = null
-      // Pause only — never clear el.src here. Setting src='' queues an error
-      // event that will fire on the NEXT onerror handler we attach, aborting
-      // the second (and every subsequent) TTS play silently.
       if (!el.paused) el.pause()
+      if (releaseForMic) {
+        // Release audio session so iOS can switch to record mode for the mic.
+        el.src = ''
+        setReadyToSpeak(false)
+        setTimeout(() => setReadyToSpeak(true), 650)
+      }
     }
     if (audioBlobUrlRef.current) {
       URL.revokeObjectURL(audioBlobUrlRef.current)
@@ -1639,16 +1646,15 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         el.onended = null
         el.onerror = null   // cleared before src change — harmless error below
         setIsPlaying(false)
-        // Release the audio session so Safari/iOS frees the audio device.
+        // Set src='' to signal iOS the audio element is done so it can release
+        // the "playback" audio session. Do NOT call el.load() — that re-activates
+        // the element and keeps the session alive longer.
         // The empty-src error fires on the now-null onerror → no harm.
-        // Without this, iOS holds the audio session in "playback" mode and
-        // the microphone cannot acquire it on the next turn.
         el.src = ''
-        el.load()
-        // Block "Tap to speak" for 350ms while iOS switches audio session
-        // from playback → record. Without this gap the mic starts but captures nothing.
+        // Gate "Tap to speak" for 650ms while iOS completes the audio session
+        // switch from playback → record. 350ms proved insufficient on some devices.
         setReadyToSpeak(false)
-        setTimeout(() => setReadyToSpeak(true), 350)
+        setTimeout(() => setReadyToSpeak(true), 650)
       }
       el.onerror = (e) => {
         console.error('[TTS] Audio element error:', e)
@@ -1991,7 +1997,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         </div>
         {/* Voice / Text mode toggle */}
         <button
-          onClick={() => { if (isPlaying) stopSpeaking(); setVoiceEnabled((v) => !v) }}
+          onClick={() => { if (isPlaying) stopSpeaking(true); setVoiceEnabled((v) => !v) }}
           style={{
             background: voiceEnabled ? C.blueBg : 'transparent',
             border: `1px solid ${voiceEnabled ? C.blueDim : C.border}`,
@@ -2110,7 +2116,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
             {isPlaying ? (
               /* AI is speaking */
               <div
-                onClick={stopSpeaking}
+                onClick={() => stopSpeaking(true)}
                 style={{ cursor: 'pointer', padding: '10px 0 4px', userSelect: 'none' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: 32, marginBottom: 6 }}>
