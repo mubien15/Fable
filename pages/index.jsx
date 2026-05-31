@@ -4202,9 +4202,9 @@ const BUILD_MESSAGES = [
   'Almost ready…',
 ]
 
-function RehearseBuildScreen({ onCancel, onBuilt }) {
+function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
   const [step, setStep]               = useState(1)
-  const [situation, setSituation]     = useState('')
+  const [situation, setSituation]     = useState(initialSituation)
   const [persona, setPersona]         = useState('')
   const [worry, setWorry]             = useState('')
   const [successLooks, setSuccess]    = useState('')
@@ -4513,6 +4513,8 @@ export default function App() {
   // Rehearse state
   const [rehearsals,      setRehearsals]      = useState([])
   const [activeRehearsal, setActiveRehearsal] = useState(null)
+  // Pre-fills step 1 of the Rehearse build (e.g. from the onboarding question).
+  const [pendingBuildSituation, setPendingBuildSituation] = useState('')
   // Where the briefing / debrief "back" arrow returns to (tracks vs rehearse).
   const [briefingBackTarget, setBriefingBackTarget] = useState('track-scenarios')
   const [debriefBackTarget,  setDebriefBackTarget]  = useState('track-scenarios')
@@ -4554,8 +4556,16 @@ export default function App() {
     const u = { name: obName, role: obRole, upcomingMoment, onboarded: true }
     lsSet(LS.user, u)
     setUser(u)
-    setScreen('home')
-    setActiveTab('home')
+    // If they named a conversation to prepare for, take them straight into the
+    // Rehearse build with it pre-filled — don't make them re-type it.
+    if (upcomingMoment && upcomingMoment.trim()) {
+      setPendingBuildSituation(upcomingMoment.trim())
+      setActiveTab('rehearse')
+      setScreen('rehearse-build')
+    } else {
+      setScreen('home')
+      setActiveTab('home')
+    }
   }
 
   // Start a session from coach screen
@@ -4590,7 +4600,7 @@ export default function App() {
   }
 
   // ── Rehearse handlers ──────────────────────────────────────────────────────
-  const startNewRehearsal = () => setScreen('rehearse-build')
+  const startNewRehearsal = () => { setPendingBuildSituation(''); setScreen('rehearse-build') }
 
   // After AI builds the scenario → route through the standard briefing screen.
   const onRehearsalBuilt = (rehearsal, scenario) => {
@@ -4968,6 +4978,7 @@ export default function App() {
       case 'rehearse-build':
         return (
           <RehearseBuildScreen
+            initialSituation={pendingBuildSituation}
             onCancel={() => { setScreen('rehearse'); setActiveTab('rehearse') }}
             onBuilt={onRehearsalBuilt}
           />
