@@ -1958,6 +1958,8 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       id: Date.now(),
       date: new Date().toLocaleDateString(),
       scenario: session?.scenario,
+      title: session?.scenarioData?.title,   // human-readable label for the session log
+      rehearsalId: session?.rehearsalId || null,
       context: session?.context,
       messages: msgs,
       userMessage: session?.userMessage,
@@ -2647,16 +2649,25 @@ function NextChallengeCard({ hardest, openBriefing, setActiveTrack }) {
   )
 }
 
-function ProgressSessionLog({ sessions, completedData }) {
+function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
   const cdObj   = completedData || {}
   const ordered = [...sessions].filter(s => s.completed).sort((a, b) => b.id - a.id).slice(0, 20)
   if (ordered.length === 0) return null
   return (
     <div>
       {ordered.map(s => {
-        const match  = findTrackScenario(s.scenario)
-        const icon   = match?.track.icon || (s.isDailyRep ? '🎯' : '💬')
-        const label  = match?.scenario.title || (s.isDailyRep ? `Day ${s.dailyRepDay} · Daily Rep` : s.scenario || 'Session')
+        const match     = findTrackScenario(s.scenario)
+        // Rehearsals aren't track scenarios — resolve their title from the
+        // stored session title, or by matching the rehearsal id, before
+        // falling back to anything cryptic.
+        const rehearsal = (s.rehearsalId || (typeof s.scenario === 'string' && s.scenario.startsWith('r_')))
+          ? rehearsals.find(r => r.id === (s.rehearsalId || s.scenario))
+          : null
+        const icon   = match?.track.icon || (s.isDailyRep ? '🎯' : rehearsal ? '✦' : '💬')
+        const label  = match?.scenario.title
+          || s.title
+          || rehearsal?.title
+          || (s.isDailyRep ? `Day ${s.dailyRepDay} · Daily Rep` : 'Rehearsal')
         const rating = cdObj[s.scenario]?.debrief?.overall_rating
         const d      = new Date(s.id)
         return (
@@ -2667,6 +2678,7 @@ function ProgressSessionLog({ sessions, completedData }) {
               <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 11 }}>
                 {d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}
                 {s.isDailyRep && ' · Daily Rep'}
+                {!s.isDailyRep && (rehearsal || s.rehearsalId) && ' · Rehearsal'}
               </p>
             </div>
             {rating && (
@@ -2881,7 +2893,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
 
       {/* ── Session log ───────────────────────────────────────────────────── */}
       <SL>All Sessions</SL>
-      <ProgressSessionLog sessions={sessions} completedData={completedData} />
+      <ProgressSessionLog sessions={sessions} completedData={completedData} rehearsals={rehearsals} />
     </div>
   )
 }
