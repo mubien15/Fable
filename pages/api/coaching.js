@@ -166,7 +166,7 @@ Make it feel written specifically for this person's situation. Do not be generic
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 600,
+        max_tokens: 256,  // counterpart replies are 1-2 sentences; lower ceiling = faster
         system: buildScenarioPrompt(scenario, difficulty, userRole),
         messages: history,
       })
