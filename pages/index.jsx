@@ -189,76 +189,109 @@ function Card({ children, bg = C.surface, border = C.border, style: s = {} }) {
   )
 }
 
-function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
-  const [listening, setListening] = useState(false)
-  const recRef   = useRef(null)
-  const finalRef = useRef('')
-  const wantRef  = useRef(false)  // true while user wants mic active
+// ─── Shared voice recorder — MediaRecorder + Whisper (iOS-reliable) ──────────
+// Replaces webkitSpeechRecognition everywhere. The browser speech API silently
+// stops producing results on iOS Safari after any <audio> playback; recording
+// audio and transcribing server-side via /api/transcribe avoids that entirely.
+function useVoiceRecorder() {
+  const [recording,    setRecording]    = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [error,        setError]        = useState(null)
+  const mrRef     = useRef(null)
+  const streamRef = useRef(null)
+  const chunksRef = useRef([])
+  const mimeRef   = useRef('audio/mp4')
 
-  useEffect(() => () => { wantRef.current = false; try { recRef.current?.stop() } catch {} }, [])
+  const release = () => {
+    try { streamRef.current?.getTracks().forEach((t) => t.stop()) } catch {}
+    streamRef.current = null
+  }
+  useEffect(() => () => release(), [])
 
-  const launch = () => {
-    if (!wantRef.current) return
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return
-    try { recRef.current?.stop() } catch {}
-    recRef.current = null
-
-    const r = new SR()
-    r.continuous     = false  // continuous:true is unreliable on iOS Safari
-    r.interimResults = true
-    r.lang           = 'en-US'
-
-    r.onresult = (e) => {
-      if (recRef.current !== r) return
-      let finalText = '', interim = ''
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' '
-        else interim += e.results[i][0].transcript
-      }
-      if (finalText) finalRef.current += finalText
-      onChange((finalRef.current + interim).trim())
+  const pickMime = () => {
+    if (typeof MediaRecorder === 'undefined') return ''
+    for (const m of ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']) {
+      try { if (MediaRecorder.isTypeSupported(m)) return m } catch {}
     }
-    r.onerror = (e) => {
-      if (recRef.current !== r) return
-      recRef.current = null
-      if (e.error === 'no-speech' && wantRef.current) {
-        setTimeout(launch, 100)
-      } else {
-        wantRef.current = false
-        setListening(false)
-      }
-    }
-    r.onend = () => {
-      if (recRef.current !== r) return
-      recRef.current = null
-      // Restart if user still wants to listen — mirrors continuous:true behaviour
-      if (wantRef.current) setTimeout(launch, 100)
-      else setListening(false)
+    return ''
+  }
+
+  const start = async () => {
+    setError(null)
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Voice recording isn’t supported in this browser — try Chrome, Safari, or Edge.')
+      return
     }
     try {
-      r.start()
-      recRef.current = r
-    } catch {
-      wantRef.current = false
-      setListening(false)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      streamRef.current = stream
+      const mime = pickMime()
+      mimeRef.current = mime || 'audio/mp4'
+      const mr = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
+      chunksRef.current = []
+      mr.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data) }
+      mrRef.current = mr
+      mr.start()
+      setRecording(true)
+    } catch (err) {
+      release()
+      setRecording(false)
+      setError(err?.name === 'NotAllowedError' || err?.name === 'SecurityError'
+        ? 'Microphone access denied — enable it in your browser settings.'
+        : 'Could not access the microphone — try again.')
     }
   }
 
-  const toggle = () => {
-    if (listening) {
-      wantRef.current = false
-      try { recRef.current?.stop() } catch {}
-      recRef.current = null
-      setListening(false)
-      return
+  // Stops recording, transcribes, returns the text (or '' on failure).
+  const stopAndTranscribe = async () => {
+    const mr = mrRef.current
+    if (!mr) { setRecording(false); return '' }
+    mrRef.current = null
+    setRecording(false)
+    setTranscribing(true)
+    const blob = await new Promise((resolve) => {
+      mr.addEventListener('stop', () => resolve(new Blob(chunksRef.current, { type: mimeRef.current })), { once: true })
+      try { mr.stop() } catch { resolve(new Blob(chunksRef.current, { type: mimeRef.current })) }
+    })
+    release()
+    try {
+      if (!blob || blob.size === 0) { setTranscribing(false); setError('No audio captured — try again.'); return '' }
+      const res = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': mimeRef.current }, body: blob })
+      const data = await res.json().catch(() => ({}))
+      setTranscribing(false)
+      const text = (data.text || '').trim()
+      if (!res.ok || !text) { setError(data.error || 'Didn’t catch that — try again.'); return '' }
+      return text
+    } catch {
+      setTranscribing(false)
+      setError('Transcription failed — check your connection and try again.')
+      return ''
     }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
-    finalRef.current = value || ''
-    wantRef.current  = true
-    setListening(true)
-    launch()
+  }
+
+  const cancel = () => {
+    const mr = mrRef.current
+    mrRef.current = null
+    chunksRef.current = []
+    try { mr?.stop() } catch {}
+    release()
+    setRecording(false)
+  }
+
+  return { recording, transcribing, error, setError, start, stopAndTranscribe, cancel }
+}
+
+function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
+  const rec = useVoiceRecorder()
+  const busy = rec.recording || rec.transcribing
+
+  const toggle = async () => {
+    if (rec.recording) {
+      const text = await rec.stopAndTranscribe()
+      if (text) onChange(value ? (value.trim() + ' ' + text).trim() : text)
+    } else if (!rec.transcribing) {
+      rec.start()
+    }
   }
 
   return (
@@ -269,42 +302,52 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
         placeholder={placeholder}
         style={{
           width: '100%', minHeight, resize: 'none', padding: '14px 52px 14px 16px',
-          background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 14,
+          background: C.surface, border: `1.5px solid ${rec.recording ? C.coral : C.border}`, borderRadius: 14,
           color: C.ink, fontSize: 16, lineHeight: 1.7, fontFamily: SERIF,
           transition: 'border-color .15s',
         }}
         onFocus={(e) => (e.target.style.borderColor = C.coral)}
-        onBlur={(e)  => (e.target.style.borderColor = C.border)}
+        onBlur={(e)  => (e.target.style.borderColor = rec.recording ? C.coral : C.border)}
       />
       <button
         onClick={toggle}
-        className={listening ? 'record-btn' : ''}
+        disabled={rec.transcribing}
+        title={rec.recording ? 'Stop & transcribe' : 'Tap to speak'}
         style={{
           position: 'absolute', bottom: 12, right: 12, width: 36, height: 36,
           borderRadius: '50%', border: 'none',
-          background: listening ? C.coral : C.border,
+          background: rec.recording ? C.coral : C.border,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: listening ? 'recordPulse 1.5s ease-in-out infinite' : 'none',
+          animation: rec.recording ? 'recordPulse 1.5s ease-in-out infinite' : 'none',
           transition: 'background .2s',
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-          stroke={listening ? '#fff' : C.inkSoft} strokeWidth="2" strokeLinecap="round">
-          <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-          <path d="M19 10v2a7 7 0 01-14 0v-2" />
-          <line x1="12" y1="19" x2="12" y2="23" />
-          <line x1="8" y1="23" x2="16" y2="23" />
-        </svg>
+        {rec.recording ? (
+          <span style={{ width: 12, height: 12, borderRadius: 2, background: '#fff', display: 'block' }} />
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke={C.inkSoft} strokeWidth="2" strokeLinecap="round">
+            <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+            <path d="M19 10v2a7 7 0 01-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        )}
       </button>
-      {listening && (
+      {(rec.recording || rec.transcribing) && (
         <div style={{
           position: 'absolute', top: 10, left: 12,
           display: 'flex', alignItems: 'center', gap: 5,
           background: C.coralBg, padding: '3px 9px', borderRadius: 20,
         }}>
           <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.coral, animation: 'pulse 1s infinite' }} />
-          <span style={{ color: C.coral, fontSize: 11, fontWeight: 700, fontFamily: SANS }}>Listening</span>
+          <span style={{ color: C.coral, fontSize: 11, fontWeight: 700, fontFamily: SANS }}>
+            {rec.transcribing ? 'Transcribing…' : 'Recording — tap ■ when done'}
+          </span>
         </div>
+      )}
+      {rec.error && !busy && (
+        <p style={{ fontFamily: SANS, fontSize: 12, color: C.coral, marginTop: 6, lineHeight: 1.4 }}>{rec.error}</p>
       )}
     </div>
   )
@@ -957,11 +1000,9 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
   const [messages, setMessages] = useState([])
   const [input,    setInput]    = useState('')
   const [loading,  setLoading]  = useState(true)
-  const [listening, setListening] = useState(false)
+  const rec        = useVoiceRecorder()
   const bottomRef  = useRef(null)
   const inputRef   = useRef(null)
-  const recRef     = useRef(null)
-  const finalRef   = useRef('')
   const initialCtx = useRef('')
 
   // Build the initial user message from session data
@@ -1008,83 +1049,20 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
     }
   }
 
-  const coachWantRef = useRef(false)
-
-  const launchCoachMic = () => {
-    if (!coachWantRef.current) return
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) return
-    try { recRef.current?.stop() } catch {}
-    recRef.current = null
-
-    const r = new SR()
-    r.continuous     = false  // continuous:true is unreliable on iOS Safari
-    r.interimResults = true
-    r.lang           = 'en-US'
-
-    r.onresult = (e) => {
-      if (recRef.current !== r) return
-      let finalText = '', interim = ''
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' '
-        else interim += e.results[i][0].transcript
-      }
-      if (finalText) finalRef.current += finalText
-      setInput((finalRef.current + interim).trim())
-    }
-    r.onerror = (e) => {
-      if (recRef.current !== r) return
-      recRef.current = null
-      if (e.error === 'no-speech' && coachWantRef.current) {
-        setTimeout(launchCoachMic, 100)
-      } else {
-        coachWantRef.current = false
-        setListening(false)
-      }
-    }
-    r.onend = () => {
-      if (recRef.current !== r) return
-      recRef.current = null
-      if (coachWantRef.current) setTimeout(launchCoachMic, 100)
-      else setListening(false)
-    }
-    try {
-      r.start()
-      recRef.current = r
-    } catch {
-      coachWantRef.current = false
-      setListening(false)
-    }
-  }
-
-  const toggleMic = () => {
-    if (listening) {
-      coachWantRef.current = false
-      try { recRef.current?.stop() } catch {}
-      recRef.current = null
-      setListening(false)
-      return
-    }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SR) { alert('Voice input is not supported in Firefox.\nPlease use Chrome, Safari, or Edge.'); return }
-    finalRef.current = input || ''
-    coachWantRef.current = true
-    setListening(true)
-    launchCoachMic()
-  }
-  const stopMic = () => {
-    if (listening) {
-      coachWantRef.current = false
-      try { recRef.current?.stop() } catch {}
-      recRef.current = null
-      setListening(false)
+  // Tap to record → tap again to stop & transcribe (appended to the input).
+  const toggleMic = async () => {
+    if (rec.recording) {
+      const text = await rec.stopAndTranscribe()
+      if (text) setInput((prev) => (prev ? (prev.trim() + ' ' + text).trim() : text))
+    } else if (!rec.transcribing) {
+      rec.start()
     }
   }
 
   const send = async () => {
     const text = input.trim()
     if (!text || loading) return
-    stopMic()
+    if (rec.recording) rec.cancel()
 
     const userMsg   = { role: 'user', content: text }
     const nextMsgs  = [...messages, userMsg]
@@ -1171,30 +1149,34 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()}
-              placeholder={listening ? 'Listening…' : 'Reply…'}
+              placeholder={rec.transcribing ? 'Transcribing…' : rec.recording ? 'Recording — tap ■ when done' : 'Reply…'}
               style={{
                 width: '100%', padding: '12px 46px 12px 16px', borderRadius: 12,
-                border: `1.5px solid ${listening ? C.blue : C.border}`,
-                background: listening ? C.blueBg : C.bg,
+                border: `1.5px solid ${rec.recording ? C.blue : C.border}`,
+                background: rec.recording ? C.blueBg : C.bg,
                 fontSize: 15, color: C.ink, fontFamily: SERIF,
                 transition: 'border-color .15s, background .15s',
               }}
             />
-            <button onClick={toggleMic} style={{
+            <button onClick={toggleMic} disabled={rec.transcribing} style={{
               position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
               width: 30, height: 30, borderRadius: '50%', border: 'none',
-              background: listening ? C.blue : C.border,
+              background: rec.recording ? C.blue : C.border,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: listening ? 'recordPulse 1.5s ease-in-out infinite' : 'none',
+              animation: rec.recording ? 'recordPulse 1.5s ease-in-out infinite' : 'none',
               transition: 'background .2s',
             }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                stroke={listening ? '#fff' : C.inkSoft} strokeWidth="2" strokeLinecap="round">
-                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                <path d="M19 10v2a7 7 0 01-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
+              {rec.recording ? (
+                <span style={{ width: 11, height: 11, borderRadius: 2, background: '#fff', display: 'block' }} />
+              ) : (
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke={C.inkSoft} strokeWidth="2" strokeLinecap="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                  <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              )}
             </button>
           </div>
           <button onClick={send} disabled={!input.trim() || loading} style={{
@@ -1203,6 +1185,9 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
             padding: '0 18px', fontSize: 18, fontWeight: 700, height: 46, flexShrink: 0,
           }}>→</button>
         </div>
+        {rec.error && !rec.recording && !rec.transcribing && (
+          <p style={{ fontFamily: SANS, fontSize: 12, color: C.coral, marginTop: 8, lineHeight: 1.4 }}>{rec.error}</p>
+        )}
       </div>
     </div>
   )
@@ -2357,16 +2342,18 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 // SHARE SCREEN
 // ═══════════════════════════════════════════════
 function ShareScreen({ session, setScreen }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied]       = useState(false)
+  const [copyError, setCopyError] = useState(false)
   const rewrite = session?.feedback?.rewrite || ''
 
   const copy = async () => {
+    setCopyError(false)
     try {
       await navigator.clipboard.writeText(rewrite)
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     } catch {
-      alert('Copy not supported — select and copy manually.')
+      setCopyError(true)
     }
   }
 
@@ -2419,6 +2406,11 @@ function ShareScreen({ session, setScreen }) {
         >
           {copied ? '✓ Copied to clipboard' : 'Copy message'}
         </button>
+        {copyError && (
+          <p style={{ fontFamily: SANS, fontSize: 12, color: C.coral, textAlign: 'center', lineHeight: 1.4 }}>
+            Couldn’t copy automatically — press and hold the message above to select and copy it.
+          </p>
+        )}
         <Btn variant="secondary" onClick={() => setScreen('feedback')}>← Back to coaching</Btn>
       </div>
     </div>
