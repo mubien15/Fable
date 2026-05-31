@@ -422,7 +422,10 @@ function BottomNav({ active, onChange }) {
       background: 'rgba(250,247,242,0.92)', backdropFilter: 'blur(12px)',
       borderTop: `1px solid ${C.border}`,
       display: 'flex', zIndex: 200,
-      paddingBottom: 'max(12px, env(safe-area-inset-bottom))', paddingTop: 8,
+      // Standalone (home-screen app) mode can report a tiny/zero safe-area inset,
+      // which left the labels too close to the edge. Add a comfortable base of
+      // 24px ON TOP of whatever inset exists, so tabs always clear the bottom.
+      paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', paddingTop: 10,
     }}>
       {tabs.map((t) => {
         const color = active === t.id ? C.coral : C.inkFaint
@@ -644,7 +647,7 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
   )
 
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
 
       {/* ── Header ── */}
       <div style={{ marginBottom: 32 }}>
@@ -826,7 +829,7 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
   )
 
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 6, lineHeight: 1.3 }}>
         Not every hard conversation fits a scenario.
       </h1>
@@ -876,7 +879,7 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
 // ═══════════════════════════════════════════════
 function CoachAreaScreen({ setScreen, onSelectArea }) {
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <SubHeader title="Coach" onBack={() => setScreen('coach')} />
       <p style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600, color: C.ink, marginBottom: 6, lineHeight: 1.35 }}>
         What area is this in?
@@ -936,7 +939,7 @@ function CoachGuidedScreen({ lifeArea, setScreen, onComplete }) {
   }
 
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <SubHeader title="Coach" onBack={goBack} />
 
       {/* Progress bar */}
@@ -974,7 +977,7 @@ function CoachGuidedScreen({ lifeArea, setScreen, onComplete }) {
 function CoachFreeformScreen({ setScreen, onStart }) {
   const [text, setText] = useState('')
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <SubHeader title="Coach" onBack={() => setScreen('coach')} />
       <p style={{ fontFamily: SERIF, fontSize: 17, color: C.inkMid, lineHeight: 1.65, marginBottom: 10 }}>
         Just start wherever feels right. There's no wrong way to begin.
@@ -1241,7 +1244,7 @@ function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) 
   }
 
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ marginBottom: 28 }}>
         <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 8 }}>
           Session complete
@@ -1428,7 +1431,7 @@ function FeedbackScreen({ session, setScreen, setSessions, sessions, storylab, s
   if (!feedback) return null
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <SubHeader title="Your coaching" onBack={() => setScreen('practice')} />
 
       {/* What you said */}
@@ -2730,7 +2733,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
   // ── Empty state ────────────────────────────────────────────────────────────
   if (progress.totalReps === 0) {
     return (
-      <div className="fade-up" style={{ padding: '60px 28px 110px', textAlign: 'center' }}>
+      <div className="fade-up" style={{ padding: '60px 28px calc(120px + env(safe-area-inset-bottom, 0px))', textAlign: 'center' }}>
         <div style={{ fontSize: 40, marginBottom: 20 }}>◈</div>
         <h1 style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 600, color: C.ink, marginBottom: 12, lineHeight: 1.35 }}>
           Your Progress
@@ -2748,7 +2751,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
   }
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
 
       {/* Header */}
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Progress</h1>
@@ -2940,7 +2943,7 @@ function DailyRepBriefingScreen({ day, scenario, setScreen, onBegin, onChooseSce
   if (!day) return null
 
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
 
       {/* Back */}
       <button
@@ -3049,7 +3052,7 @@ function DailyRepDebriefScreen({ day, setScreen, onComplete }) {
   if (!day) return null
 
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ marginBottom: 28 }}>
         <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: C.teal, marginBottom: 8 }}>
           Rep complete ✓
@@ -3116,7 +3119,7 @@ function DailyRepScreen({ dailyRep, setScreen, onStartDay }) {
   ]
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
 
       {/* Header */}
       <div style={{ marginBottom: 6 }}>
@@ -3249,7 +3252,7 @@ function StorylabScreen({ storylab, setStorylab, setScreen, onStartMission }) {
   const completed  = storylab.completedDays || []
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ marginBottom: 24 }}>
         <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', marginBottom: 6 }}>
           BUILT INTO FABLE
@@ -3364,7 +3367,7 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
   })
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 6 }}>Scenarios</h1>
       <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.6, marginBottom: 28 }}>
         Pick a track and start your rep. Every scenario is a real conversation — not a drill.
@@ -3474,7 +3477,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
   }
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <SubHeader title={track.title} onBack={() => setScreen('scenarios')} />
 
       <p style={{ color: C.inkSoft, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
@@ -3603,7 +3606,7 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
   if (!scenario) return null
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       {/* Back */}
       <button
         onClick={onBack}
@@ -3809,7 +3812,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
   )
 
   return (
-    <div className="fade-up" style={{ padding: '28px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       {/* Header */}
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 20, padding: 0 }}>←</button>
       <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>
@@ -4072,7 +4075,7 @@ function RehearseScreen({ rehearsals, onNew, onRehearse, onReflect, goToScenario
   // ── Empty state ──
   if (rehearsals.length === 0) {
     return (
-      <div className="fade-up" style={{ padding: '36px 24px 110px' }}>
+      <div className="fade-up" style={{ padding: '36px 24px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
         <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Rehearse</h1>
         <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.5, marginBottom: 28 }}>
           For the conversations that actually matter.
@@ -4109,7 +4112,7 @@ function RehearseScreen({ rehearsals, onNew, onRehearse, onReflect, goToScenario
 
   // ── Active state ──
   return (
-    <div className="fade-up" style={{ padding: '36px 20px 110px' }}>
+    <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
       <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Rehearse</h1>
       <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, lineHeight: 1.5, marginBottom: 28 }}>
         For the conversations that matter
