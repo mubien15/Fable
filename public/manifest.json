@@ -1,0 +1,17 @@
+{
+  "name": "Fable — Your Communication Coach",
+  "short_name": "Fable",
+  "description": "Rehearse the conversations that matter, before they're real.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF7F2",
+  "theme_color": "#FAF7F2",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}

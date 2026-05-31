@@ -4,10 +4,14 @@ export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <meta name="description" content="Fable — a free AI coach for real-life conversations" />
+        <meta name="description" content="Fable — rehearse the conversations that matter, before they're real." />
         <meta name="theme-color" content="#FAF7F2" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Fable" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
