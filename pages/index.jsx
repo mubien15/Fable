@@ -618,7 +618,7 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface, career: C.surface }
 
-function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay }) {
+function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay }) {
   const greeting = (() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
@@ -754,9 +754,14 @@ function HomeScreen({ user, sessions, dailyRep, setScreen, onResumeSession, setA
           <SectionLabel>Recent Sessions</SectionLabel>
           {sessions.slice(-2).reverse().map((s) => {
             const trackMatch = findTrackScenario(s.scenario)
-            const chip = trackMatch
-              ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
-              : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario || 'Session' }
+            const rehearsal = (s.rehearsalId || (typeof s.scenario === 'string' && s.scenario.startsWith('r_')))
+              ? rehearsals.find((r) => r.id === (s.rehearsalId || s.scenario))
+              : null
+            const chip = (s.rehearsalId || rehearsal || s.title)
+              ? { icon: '✦', label: s.title || rehearsal?.title || 'Rehearsal' }
+              : trackMatch
+                ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
+                : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario || 'Session' }
             return (
               <div key={s.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
@@ -4826,6 +4831,7 @@ export default function App() {
           <HomeScreen
             user={user}
             sessions={sessions}
+            rehearsals={rehearsals}
             dailyRep={dailyRep}
             setScreen={(s) => { setScreen(s); if (['coach','progress','daily-rep'].includes(s)) setActiveTab(s === 'daily-rep' ? 'home' : s) }}
             setActiveTrack={setActiveTrack}
