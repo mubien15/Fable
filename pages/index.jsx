@@ -4731,7 +4731,24 @@ export default function App() {
   }
 
   // Open the briefing screen for a scenario
+  // Central tier gate: free-tier users can only access the first scenario of
+  // each track. Daily reps / rehearsals (no track match) are never locked.
+  const isScenarioLockedForUser = (scenario) => {
+    if (user?.tier !== 'free') return false
+    if (!scenario?.id) return false
+    const match = findTrackScenario(scenario.id)
+    if (!match) return false
+    return match.track.scenarios.findIndex((s) => s.id === scenario.id) > 0
+  }
+
   const openBriefing = (scenario, initialDifficulty = null) => {
+    // Block locked scenarios from every entry point (Home, Progress, track list,
+    // next-challenge card) — route to the track list where the upgrade prompt shows.
+    if (isScenarioLockedForUser(scenario)) {
+      const match = findTrackScenario(scenario.id)
+      if (match) { setActiveTrack(match.track); setScreen('track-scenarios'); setActiveTab('scenarios') }
+      return
+    }
     setActiveBriefingScenario(scenario)
     setPendingBriefingDifficulty(initialDifficulty || scenario.difficulty_default || 'medium')
     setScreen('scenario-briefing')
