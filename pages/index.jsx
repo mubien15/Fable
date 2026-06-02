@@ -3484,8 +3484,9 @@ const DIFFICULTY_META = {
   hard:   { label: 'Hard',   color: C => C.coral,  bg: C => C.coralBg,  desc: 'Defensive, will push back hard'        },
 }
 
-function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefing, currentSession, completedScenarios = [] }) {
+function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefing, currentSession, completedScenarios = [], user }) {
   const [selected, setSelected] = useState(null)
+  const isFreeTier = user?.tier === 'free'
 
   if (!track) { setScreen('scenarios'); return null }
 
@@ -3509,6 +3510,8 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
           // Check if there's a saved (resumable) conversation for this scenario
           const isResumable = currentSession?.scenario === scenario.id &&
             (currentSession?.messages?.length || 0) > 1
+          const scenarioIndex = track.scenarios.findIndex(s => s.id === scenario.id)
+          const isLocked = isFreeTier && scenarioIndex > 0
 
           return (
             <div
@@ -3551,6 +3554,12 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                         color: C.blue, background: C.blueBg, padding: '2px 8px', borderRadius: 20,
                       }}>IN PROGRESS</span>
                     )}
+                    {isLocked && (
+                      <span style={{
+                        fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
+                        color: C.inkSoft, background: C.surfaceSubtle, padding: '2px 8px', borderRadius: 20,
+                      }}>🔒 Members only</span>
+                    )}
                   </div>
                   <p style={{
                     fontFamily: SERIF, color: C.inkSoft, fontSize: 13, lineHeight: 1.55,
@@ -3580,14 +3589,20 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                   </div>
 
                   {/* Resume or Briefing — depends on whether there's a saved conversation */}
-                  {isResumable ? (
+                  {isLocked ? (
+                    <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
+                      <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 6 }}>🔒 Founding Members only</p>
+                      <p style={{ fontFamily: SERIF, fontSize: 13, color: C.inkMid, lineHeight: 1.5, marginBottom: 12 }}>
+                        This scenario is part of the full Fable library. Founding members get all 30+ scenarios at a rate locked for life.
+                      </p>
+                      <a href="https://www.scenariolab.quest#pricing" style={{ display: 'block', padding: '11px', borderRadius: 12, background: C.coral, color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                        See founding access →
+                      </a>
+                    </div>
+                  ) : isResumable ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <Btn onClick={() => setScreen('simulation')}>
-                        Resume conversation →
-                      </Btn>
-                      <Btn variant="secondary" onClick={() => onViewBriefing(scenario)}>
-                        Start fresh
-                      </Btn>
+                      <Btn onClick={() => setScreen('simulation')}>Resume conversation →</Btn>
+                      <Btn variant="secondary" onClick={() => onViewBriefing(scenario)}>Start fresh</Btn>
                     </div>
                   ) : (
                     <Btn onClick={() => onViewBriefing(scenario)}>
@@ -4538,6 +4553,7 @@ export default function App() {
   // Where the briefing / debrief "back" arrow returns to (tracks vs rehearse).
   const [briefingBackTarget, setBriefingBackTarget] = useState('track-scenarios')
   const [debriefBackTarget,  setDebriefBackTarget]  = useState('track-scenarios')
+  const [pendingTier, setPendingTier] = useState(null)
 
   const refreshRehearsals = () => setRehearsals(getRehearsals())
 
@@ -4557,6 +4573,14 @@ export default function App() {
     setCompletedData(savedCompletedData)
     setRehearsals(getRehearsals())
 
+    if (typeof window !== 'undefined') {
+      const urlPlan = new URLSearchParams(window.location.search).get('plan')
+      if (urlPlan === 'free' || urlPlan === 'full') {
+        setPendingTier(urlPlan)
+        if (savedUser) { savedUser.tier = urlPlan; lsSet(LS.user, savedUser) }
+      }
+    }
+
     if (savedUser?.onboarded) {
       setUser(savedUser)
       setScreen('home')
@@ -4573,7 +4597,7 @@ export default function App() {
 
   // Onboarding flow
   const finishOnboarding = (upcomingMoment) => {
-    const u = { name: obName, role: obRole, upcomingMoment, onboarded: true }
+    const u = { name: obName, role: obRole, upcomingMoment, onboarded: true, tier: pendingTier || 'full' }
     lsSet(LS.user, u)
     setUser(u)
     // If they named a conversation to prepare for, take them straight into the
@@ -5120,6 +5144,7 @@ export default function App() {
             onViewBriefing={(scenario) => openBriefing(scenario)}
             completedScenarios={completedScenarios}
             currentSession={currentSession}
+            user={user}
           />
         )
 
