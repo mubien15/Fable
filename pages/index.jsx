@@ -4100,9 +4100,36 @@ const REHEARSE_DIFF = [
 ]
 
 // ── Entry screen — empty + active states ─────────────────────────────────────
-function RehearseScreen({ rehearsals, onNew, onRehearse, onReflect, goToScenarios }) {
+function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToScenarios }) {
   const upcoming = rehearsals.filter((r) => r.status !== 'done')
   const past     = rehearsals.filter((r) => r.status === 'done')
+
+  // ── Free tier: Rehearse is a Founding Members feature ──
+  if (user?.tier === 'free') {
+    return (
+      <div className="fade-up" style={{ padding: '36px 24px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Rehearse</h1>
+        <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.5, marginBottom: 28 }}>
+          For the conversations that actually matter.
+        </p>
+
+        <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 18, padding: '28px 22px', marginBottom: 24, textAlign: 'center' }}>
+          <p style={{ fontSize: 30, marginBottom: 12 }}>🔒</p>
+          <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 10 }}>Founding Members only</p>
+          <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.6, marginBottom: 18 }}>
+            Rehearse builds a simulation <strong style={{ color: C.coral }}>personalized to you</strong> — your exact situation, the real person you're facing, and what you're worried about. It's part of the full Fable membership.
+          </p>
+          <a href="https://www.scenariolab.quest#pricing" style={{ display: 'block', padding: '13px', borderRadius: 12, background: C.coral, color: '#fff', fontFamily: SANS, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+            See founding access →
+          </a>
+        </div>
+
+        <button onClick={goToScenarios} style={{ display: 'block', margin: '0 auto', background: 'none', border: 'none', color: C.coral, fontFamily: SANS, fontSize: 14, fontWeight: 600 }}>
+          Browse the Scenarios library →
+        </button>
+      </div>
+    )
+  }
 
   // ── Empty state ──
   if (rehearsals.length === 0) {
@@ -4602,7 +4629,8 @@ export default function App() {
     setUser(u)
     // If they named a conversation to prepare for, take them straight into the
     // Rehearse build with it pre-filled — don't make them re-type it.
-    if (upcomingMoment && upcomingMoment.trim()) {
+    // (Rehearse is a paid feature, so free-tier users go home instead.)
+    if (u.tier !== 'free' && upcomingMoment && upcomingMoment.trim()) {
       setPendingBuildSituation(upcomingMoment.trim())
       setActiveTab('rehearse')
       setScreen('rehearse-build')
@@ -4644,7 +4672,10 @@ export default function App() {
   }
 
   // ── Rehearse handlers ──────────────────────────────────────────────────────
-  const startNewRehearsal = () => { setPendingBuildSituation(''); setScreen('rehearse-build') }
+  const startNewRehearsal = () => {
+    if (user?.tier === 'free') { setActiveTab('rehearse'); setScreen('rehearse'); return }
+    setPendingBuildSituation(''); setScreen('rehearse-build')
+  }
 
   // After AI builds the scenario → route through the standard briefing screen.
   const onRehearsalBuilt = (rehearsal, scenario) => {
@@ -5029,6 +5060,7 @@ export default function App() {
       case 'rehearse':
         return (
           <RehearseScreen
+            user={user}
             rehearsals={rehearsals}
             onNew={startNewRehearsal}
             onRehearse={rehearseExisting}
