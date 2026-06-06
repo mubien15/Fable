@@ -8,6 +8,14 @@ import {
 } from '../data/rehearsals'
 
 // ═══════════════════════════════════════════════
+// FEATURE FLAGS
+// ═══════════════════════════════════════════════
+// Master switch for free/paid tier gating (locked scenarios + Rehearse).
+// Set to false for a completely open app (no friction). Flip to true to
+// re-enable the founding-members paywall.
+const TIER_GATING_ENABLED = false
+
+// ═══════════════════════════════════════════════
 // DESIGN TOKENS
 // ═══════════════════════════════════════════════
 const C = {
@@ -3486,7 +3494,7 @@ const DIFFICULTY_META = {
 
 function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefing, currentSession, completedScenarios = [], user }) {
   const [selected, setSelected] = useState(null)
-  const isFreeTier = user?.tier === 'free'
+  const isFreeTier = TIER_GATING_ENABLED && user?.tier === 'free'
 
   if (!track) { setScreen('scenarios'); return null }
 
@@ -4105,7 +4113,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToSc
   const past     = rehearsals.filter((r) => r.status === 'done')
 
   // ── Free tier: Rehearse is a Founding Members feature ──
-  if (user?.tier === 'free') {
+  if (TIER_GATING_ENABLED && user?.tier === 'free') {
     return (
       <div className="fade-up" style={{ padding: '36px 24px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
         <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Rehearse</h1>
@@ -4630,7 +4638,7 @@ export default function App() {
     // If they named a conversation to prepare for, take them straight into the
     // Rehearse build with it pre-filled — don't make them re-type it.
     // (Rehearse is a paid feature, so free-tier users go home instead.)
-    if (u.tier !== 'free' && upcomingMoment && upcomingMoment.trim()) {
+    if ((!TIER_GATING_ENABLED || u.tier !== 'free') && upcomingMoment && upcomingMoment.trim()) {
       setPendingBuildSituation(upcomingMoment.trim())
       setActiveTab('rehearse')
       setScreen('rehearse-build')
@@ -4673,7 +4681,7 @@ export default function App() {
 
   // ── Rehearse handlers ──────────────────────────────────────────────────────
   const startNewRehearsal = () => {
-    if (user?.tier === 'free') { setActiveTab('rehearse'); setScreen('rehearse'); return }
+    if (TIER_GATING_ENABLED && user?.tier === 'free') { setActiveTab('rehearse'); setScreen('rehearse'); return }
     setPendingBuildSituation(''); setScreen('rehearse-build')
   }
 
@@ -4765,6 +4773,7 @@ export default function App() {
   // Central tier gate: free-tier users can only access the first scenario of
   // each track. Daily reps / rehearsals (no track match) are never locked.
   const isScenarioLockedForUser = (scenario) => {
+    if (!TIER_GATING_ENABLED) return false
     if (user?.tier !== 'free') return false
     if (!scenario?.id) return false
     const match = findTrackScenario(scenario.id)
