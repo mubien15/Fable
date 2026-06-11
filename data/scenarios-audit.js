@@ -26,7 +26,7 @@ export const AUDIT_SCENARIOS = [
       'Getting explicit acknowledgment without forcing a fight',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the Process Owner as follows:
 - Opening: slightly defensive, hoping it's not a big deal
 - If the auditor is vague or soft: take advantage, minimise ("it was just a few months, nothing bad happened")
@@ -63,7 +63,7 @@ Play the Process Owner as follows:
       'Inviting collaboration on remediation while not softening the finding itself',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the Head of Compliance as follows:
 - Initially professional but clearly tense — they know this conversation might not go well
 - First response: try to reframe ("I think there may be a misunderstanding about how we apply the lookback period")
@@ -83,7 +83,7 @@ Play the Head of Compliance as follows:
     userRole: 'Lead Auditor',
     counterpartRole: 'CFO or Finance Director — powerful, articulate, and genuinely believes the finding is wrong.',
     context: `You have issued a draft audit finding rating a reconciliation control as 'High Risk.' The CFO has requested this meeting to challenge the rating. They believe the compensating controls in place mean the risk is actually 'Low.' You have reviewed their argument and believe they are partially right — the compensating controls do reduce the risk somewhat — but the underlying control weakness is still real and should be rated 'Medium' at minimum.`,
-    challenge: 'This is a high-stakes negotiation. The CFO is senior to you in the organisation and is well-prepared. You need to demonstrate that you have genuinely considered their argument, be willing to move from High to Medium (which is defensible), but not capitulate to Low (which would misrepresent the risk).',
+    challenge: 'This is a high-stakes negotiation. The CFO is senior to you in the organization and is well-prepared. You need to demonstrate that you have genuinely considered their argument, be willing to move from High to Medium (which is defensible), but not capitulate to Low (which would misrepresent the risk).',
     card_blurb: 'Learn the difference between genuine reconsideration and capitulation under pressure.',
     context_short: 'You\'ve rated a reconciliation control as High Risk. The CFO has called a meeting to challenge it — and has a partially valid argument.',
     good_outcome: 'You move from High to Medium after genuinely considering their compensating controls argument — not because of pressure, but because it\'s defensible. You hold Medium firmly.',
@@ -100,7 +100,7 @@ Play the Head of Compliance as follows:
       'Managing power dynamics — staying professional when someone senior challenges you',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the CFO as follows:
 - Well-prepared, cites specific compensating controls, speaks with authority
 - Not hostile — this is professional disagreement, not a personal attack
@@ -138,7 +138,7 @@ Play the CFO as follows:
       'Language that invites agreement on next steps without sounding weak',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play all three stakeholders, switching clearly between them — prefix each response with the speaker name in brackets e.g. [Process Owner]:
 - **[Process Owner]**: interjects when their High finding comes up, tries to relitigate it in the room ("I'd like to note that we disagree with the severity rating")
 - **[CFO]**: asks one sharp question about business impact ("What's the financial exposure here?") then stays quiet

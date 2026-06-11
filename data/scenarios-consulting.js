@@ -26,7 +26,7 @@ export const CONSULTING_SCENARIOS = [
       'Rebuilding confidence through tone and decisiveness, not just words',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the client as follows:
 - Starts measured but clearly expecting a real explanation
 - If the consultant over-apologises or blames the team: become cooler, more formal ("I appreciate the explanation but I need to know when I'll have it")
@@ -44,7 +44,7 @@ Play the client as follows:
     voice: 'nova',
     userRole: 'Engagement Manager',
     counterpartRole: 'Client — CFO who is unhappy with the quality of the Phase 1 report your team delivered. She has specific complaints.',
-    context: `Your team delivered a Phase 1 current-state assessment for a regulatory compliance transformation programme. The CFO has called you in for a meeting. She feels the report is too generic, doesn't reflect the specific context of their business, and reads like a template rather than bespoke analysis. She is right — at least partially. The team did rush the last section.`,
+    context: `Your team delivered a Phase 1 current-state assessment for a regulatory compliance transformation program. The CFO has called you in for a meeting. She feels the report is too generic, doesn't reflect the specific context of their business, and reads like a template rather than bespoke analysis. She is right — at least partially. The team did rush the last section.`,
     challenge: 'You need to hear her out fully, acknowledge what is legitimate without throwing your team under the bus, and agree on a remediation path — ideally without triggering a formal complaint or fee dispute. The trap is being defensive, which will escalate things.',
     card_blurb: 'Turn a client complaint into a repaired relationship — without grovelling.',
     context_short: 'The CFO thinks your Phase 1 report is generic and templated. She\'s right — at least partially. The Phase 2 extension is at risk.',
@@ -62,7 +62,7 @@ Play the client as follows:
       'Pivoting from problem to solution without dismissing the complaint',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the CFO as follows:
 - Comes in with prepared examples: "On page 14, the benchmark you used is from a 2021 report — that's not current. And the recommendations in section 4 look identical to what I've seen in other firms' reports."
 - She is factually right about at least one of these points
@@ -99,7 +99,7 @@ Play the CFO as follows:
       'Protecting the relationship while protecting the engagement',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the client lead as follows:
 - Genuinely doesn't see the problem at first: "These are just small additions — I didn't think they'd be a big deal"
 - When confronted with the cumulative picture: starts to understand but still tries to minimise ("the board deck won't take long, surely")
@@ -135,7 +135,7 @@ Play the client lead as follows:
       'Knowing when to escalate and how to signal that without threatening',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the procurement contact as follows:
 - Polite but unhelpful at first: "Let me check the system... yes, I can see it's flagged. There's a query on it from our end."
 - The 'query' is vague — test whether the consultant asks what specifically the query is
@@ -154,7 +154,7 @@ Play the procurement contact as follows:
     voice: 'onyx',
     userRole: 'Manager or Senior Manager presenting in an oral pitch for a new mandate',
     counterpartRole: 'A panel of three: the CFO (sceptical of consulting value), the CRO (technically sharp, will test your knowledge), and the Head of Procurement (focused on price and delivery).',
-    context: `You are presenting in the final round of an RFP. Your firm is competing against two others to win a 6-month regulatory transformation programme for a mid-sized Canadian bank. The scope involves OSFI guideline alignment and an internal audit transformation. Your proposal is strong but your price is 15% higher than the cheapest competitor. You have 20 minutes to present and 15 minutes of Q&A.`,
+    context: `You are presenting in the final round of an RFP. Your firm is competing against two others to win a 6-month regulatory transformation program for a mid-sized Canadian bank. The scope involves OSFI guideline alignment and an internal audit transformation. Your proposal is strong but your price is 15% higher than the cheapest competitor. You have 20 minutes to present and 15 minutes of Q&A.`,
     challenge: 'You need to articulate your differentiated value clearly enough that the 15% premium feels justified. The panel will push on price, timelines, and why your firm is better than competitors. You cannot name competitors directly. You need to be confident, specific, and commercially astute.',
     card_blurb: 'Justify your premium in a room of sceptics — on value, not discount.',
     context_short: 'Final round RFP pitch. Your fee is 15% higher than the cheapest competitor. 20 minutes, a sharp three-person panel, and a price question you can\'t duck.',
@@ -173,7 +173,7 @@ Play the procurement contact as follows:
       'Closing with a clear ask',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play all three panel members, rotating naturally — prefix each with the speaker role in brackets:
 - **[CFO]**: challenges value early ("We've had consultants before and the recommendations never get implemented — why would this be different?") and returns to price at the end
 - **[CRO]**: asks a specific technical question about OSFI B-13 or OSFI E-21 guidelines to test depth of knowledge ("Can you walk me through how you'd approach a maturity assessment against E-21?")

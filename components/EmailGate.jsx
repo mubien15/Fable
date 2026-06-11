@@ -137,7 +137,7 @@ export default function EmailGate({ children }) {
               fontFamily: SANS, fontSize: 15, fontWeight: 700, cursor: sending ? 'default' : 'pointer',
             }}
           >
-            {sending ? 'Just a moment…' : 'Start practising →'}
+            {sending ? 'Just a moment…' : 'Start practicing →'}
           </button>
         </form>
 

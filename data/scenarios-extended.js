@@ -32,7 +32,7 @@ export const EXTENDED_SCENARIOS = [
       'Knowing when to say "I\'ll need to confirm that and come back to you" rather than guessing',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the regulatory examiner as follows:
 - Methodical and calm — never aggressive, but relentlessly precise
 - Every answer gets a follow-up: "Can you give me a specific example of that?" or "When did that last happen?"
@@ -70,7 +70,7 @@ Play the regulatory examiner as follows:
       'Understanding what you are and are not responsible for in this conversation',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the CCO as follows:
 - Takes the meeting seriously from the start — this is not a conversation they treat lightly
 - First response: asks clarifying questions about the specific observations ("Walk me through exactly what you saw — transaction by transaction")
@@ -110,7 +110,7 @@ Play the CCO as follows:
       'Adapting your communication style without losing clarity on what you need',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the senior client stakeholder as follows:
 - Extremely polite, warm, and indirect throughout
 - Never says anything is wrong directly — concern surfaces as: "We have been very busy internally," "There are some things we are still considering," "Perhaps we can revisit the timeline"
@@ -148,7 +148,7 @@ Play the senior client stakeholder as follows:
       'Knowing the difference between deferring to experience and suppressing a legitimate concern',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the partner as follows:
 - Initially slightly impatient — there is a lot to do before the client call
 - First response: "I hear you, but I've been doing this for 20 years — clients need confidence, not caveats"
@@ -189,7 +189,7 @@ Play the partner as follows:
       'Recognising the moment when trust shifts — and building on it rather than reverting to formality',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the auditee as follows:
 - Starts polite but guarded — short answers, no volunteering of information
 - First response: "Thanks for the context. I've prepared the documentation you asked for." (Cooperative but closed)
@@ -232,7 +232,7 @@ Play the auditee as follows:
       'Addressing the client diplomatically — making them feel valued while redirecting the working relationship',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the partner as follows:
 - Warm but slightly dismissive of the concern at first: "I don't mind — if the client wants to reach out directly, that's a good sign they're engaged"
 - If the engagement lead frames it as a personal insecurity ("it makes me look bad"): remains unconvinced — "I wouldn't worry about that"
@@ -274,7 +274,7 @@ Play the partner as follows:
       'Being clear about what happens next without overwhelming them with information',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the direct report as follows:
 - Comes in not knowing what this meeting is about — perhaps thinks it is a routine check-in
 - First reaction to the news: silence for a beat, then "I'm sorry — what?" (shock, not anger)
@@ -314,7 +314,7 @@ Play the direct report as follows:
       'Leaving with one small concrete step, not a full plan — this conversation is about opening the door',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the direct report as follows:
 - Comes in acting normal — "fine, ready to go through the list"
 - First response to the genuine check-in: "I'm okay, just been a bit full-on lately" — a deflection, not a lie
@@ -354,7 +354,7 @@ Play the direct report as follows:
       'Only committing to what you can actually stand behind — not what makes the moment feel better',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the direct report as follows:
 - Comes in expecting good news — positive body language, "ready to hear it"
 - First reaction to the no: silence for a beat, then "Okay. Can I ask why?"
@@ -384,7 +384,7 @@ Play the direct report as follows:
     good_outcome: 'The direct report feels genuinely heard — not managed or steamrolled. You either adjust your position with clear reasoning, or hold it with equal clarity. Either is a good outcome. What matters is that the team sees disagreement handled with confidence and respect.',
     watch_out_for: [
       'Shutting the conversation down before they\'ve made their full case — it will feel dismissive even if your decision is right',
-      'Changing your position because they\'re persistent, not because they\'ve made a better argument — it trains the wrong behaviour',
+      'Changing your position because they\'re persistent, not because they\'ve made a better argument — it trains the wrong behavior',
       'Giving a non-answer like "I hear you" without actually stating clearly whether you\'re adjusting or holding',
     ],
     opening_line: "I want to make sure you feel you\'ve had a proper hearing on this — so walk me through your thinking. What specifically concerns you about the approach?",
@@ -395,7 +395,7 @@ Play the direct report as follows:
       'Keeping authority and warmth in the same conversation — not sacrificing one for the other',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the direct report as follows:
 - Confident and clear — they've thought this through and they believe they're right
 - Makes a specific, logical argument: "My concern is that the approach we've agreed doesn't account for [specific thing] — and here's what I think that means for delivery"

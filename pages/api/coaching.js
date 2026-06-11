@@ -7,7 +7,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const FALLBACK = {
   strengths: [
-    { label: 'You showed up', note: 'Practising the conversation before it happens already puts you ahead of most people.' },
+    { label: 'You showed up', note: 'Practicing the conversation before it happens already puts you ahead of most people.' },
     { label: 'Clear intent',  note: 'Your message has a clear purpose — that gives us a solid foundation to work from.' },
   ],
   sharpen: {
@@ -15,7 +15,7 @@ const FALLBACK = {
     note: 'The coach is temporarily unavailable — give it a moment and resubmit.',
   },
   rewrite: "Let's pick this back up in a moment. I want to give your words the attention they deserve.",
-  coachNote: 'Connection hiccup. Keep going — showing up to practise is already the hard part.',
+  coachNote: 'Connection hiccup. Keep going — showing up to practice is already the hard part.',
 }
 
 // ─── Handler ───────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ Make it feel written specifically for this person's situation. Do not be generic
       // The simulation prompt builder expects `system_prompt_addition`; map the
       // generated counterpart instructions onto it so role-play runs identically.
       scenario.system_prompt_addition = scenario.counterpart_instructions
-        ? `\n## Counterpart Behaviour Guide\n${scenario.counterpart_instructions}\n`
+        ? `\n## Counterpart Behavior Guide\n${scenario.counterpart_instructions}\n`
         : ''
 
       return res.json({ scenario })
@@ -294,7 +294,7 @@ Return ONLY valid JSON in this exact structure — no extra keys, no markdown:
       }
     }
 
-    // ── Communication profile — personalised 2-3 sentence summary ────────
+    // ── Communication profile — personalized 2-3 sentence summary ────────
     if (mode === 'profile') {
       const { progressData } = req.body
       const strengths = (progressData?.strengths || []).map(s => `${s.area} (${Number(s.avg).toFixed(1)}/5)`).join(', ')
@@ -302,8 +302,8 @@ Return ONLY valid JSON in this exact structure — no extra keys, no markdown:
 
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
-        max_tokens: 200,
-        system: `You are a communication coach writing a brief, honest, personalised profile for a professional based on their practice data. Write in second person ("You..."). Be specific, direct, and constructive — no generic praise. Reference actual patterns. Return only the profile text, no preamble.`,
+        max_tokens: 150,
+        system: `You are a communication coach writing a brief, honest, personalized profile for a professional based on their practice data. Write in second person ("You..."). Return only the profile text, no preamble.`,
         messages: [{
           role: 'user',
           content: `Practice data:
@@ -311,18 +311,34 @@ Return ONLY valid JSON in this exact structure — no extra keys, no markdown:
 - Average rating: ${progressData?.avgRating || 'n/a'}/5
 - Strongest focus areas: ${strengths || 'not yet determined'}
 - Areas to develop: ${develop || 'not yet determined'}
-- Most practised track: ${progressData?.mostPracticed || 'n/a'}
-- Least practised track: ${progressData?.leastPracticed || 'n/a'}
+- Most practiced track: ${progressData?.mostPracticed || 'n/a'}
+- Least practiced track: ${progressData?.leastPracticed || 'n/a'}
 - Current streak: ${progressData?.streak || 0} days
 
-Write a 2-3 sentence personalised communication profile. Be specific to these patterns.`,
+Write a communication profile in MAXIMUM 3 sentences.
+
+Rules:
+- Describe only observable patterns from the data (tracks practiced,
+  session counts, scores).
+- NEVER speculate about motives, feelings, or what the user might be
+  "avoiding". Do not use the words "avoiding", "comfort zone",
+  "perhaps", "suggests you might", or any psychoanalysis.
+- Tone: a respectful senior mentor stating what they see —
+  not a therapist interpreting behavior.
+- End with one concrete, neutral suggestion for what to practice next.
+
+Example of the right tone:
+"Three sessions in, all on the audit track — a solid start with
+structured, evidence-based conversations. The consulting and
+leadership tracks are still unexplored. A client-conversation
+scenario would be a natural next step."`,
         }],
       })
 
       return res.json({ profile: response.content[0].text.trim() })
     }
 
-    // ── Pattern: analyse recent sessions ─────────────────────────────────
+    // ── Pattern: analyze recent sessions ─────────────────────────────────
     if (mode === 'pattern') {
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
@@ -367,7 +383,7 @@ Write a 2-3 sentence personalised communication profile. Be specific to these pa
     if (mode === 'generate-scenario') return res.status(502).json({ error: 'Could not build your scenario right now — please try again in a moment.' })
     if (mode === 'scenario-debrief') return res.json({ overall_rating: 3, overall_summary: 'Debrief temporarily unavailable — try again in a moment.', what_landed: { observation: '', quote: '', why_it_works: '' }, what_created_friction: { observation: '', quote: '', impact: '' }, the_pattern: '', try_this_instead: '', the_principle: '', focus_scores: {}, speech_observations: { filler_phrases: [], hedging_language: [], strong_moments: [] }, next_challenge: '' })
     if (mode === 'profile')         return res.json({ profile: null })
-    if (mode === 'pattern')         return res.json({ pattern: 'Keep practising — patterns emerge over time.' })
+    if (mode === 'pattern')         return res.json({ pattern: 'Keep practicing — patterns emerge over time.' })
     return res.status(200).json(FALLBACK)
   }
 }

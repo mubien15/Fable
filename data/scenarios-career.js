@@ -32,7 +32,7 @@ export const CAREER_SCENARIOS = [
       'Knowing what you will and won\'t accept before you walk in',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the manager/HR partner as follows:
 - Warm and genuine — they do want to retain this person
 - First response: "I appreciate you raising this directly — tell me what you have in mind"
@@ -73,7 +73,7 @@ Play the manager/HR partner as follows:
       'Leaving with a concrete next step — not a vague reassurance',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the manager as follows:
 - Attentive and fair — takes the conversation seriously
 - First response: "I'm glad you raised this. Walk me through what makes you feel ready."
@@ -112,7 +112,7 @@ Play the manager as follows:
       'Keeping the relationship intact while making clear this matters to you',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the manager as follows:
 - Slightly uncomfortable — they thought this was done and now need to defend a decision
 - First response: "I understand this is disappointing. What specifically did you want to discuss?"
@@ -151,7 +151,7 @@ Play the manager as follows:
       'Leaving with a concrete commitment — not just acknowledgment',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the senior manager as follows:
 - Starts slightly distracted — a lot on their plate
 - First response is genuinely surprised: "I didn't realise it had reached that point — tell me what's backed up"
@@ -190,7 +190,7 @@ Play the senior manager as follows:
       'Distinguishing between support and active advocacy — you need the latter',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the manager as follows:
 - Warm and genuinely fond of this person — visible in the tone from the start
 - First response: "I really appreciate you telling me directly. Tell me more about where you're thinking."
@@ -229,7 +229,7 @@ Play the manager as follows:
       'Not over-apologising — one acknowledgment is enough',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the senior as follows:
 - Initially surprised — not used to being pushed back on
 - First response: "I understand you're busy, but this is genuinely urgent — it won't take long."
@@ -260,7 +260,7 @@ Play the senior as follows:
       'Asking questions before you\'ve confirmed you understand what you\'ve been told — check your understanding first',
       'Leaving without knowing the timeline, the criteria being used, and what consultation actually means in practice',
     ],
-    opening_line: "Thank you for coming in. We want to start by saying this is difficult news, and we want to handle this conversation with care. We're here to talk about some changes in the organisation that may affect your role.",
+    opening_line: "Thank you for coming in. We want to start by saying this is difficult news, and we want to handle this conversation with care. We're here to talk about some changes in the organization that may affect your role.",
     coaching_focus: [
       'Staying composed and asking questions rather than reacting emotionally',
       'Confirming your understanding before asking for detail — "Let me make sure I understand what you\'re telling me"',
@@ -268,7 +268,7 @@ Play the senior as follows:
       'Leaving with clarity about next steps — not a fight you can\'t win in this room',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the HR representative and manager as follows:
 - Careful, scripted, sympathetic — this is a formal process and they are staying on it
 - Open with the at-risk notification clearly: "We're in a restructuring process and your role has been identified as at risk. This begins a formal consultation period."
@@ -308,7 +308,7 @@ Play the HR representative and manager as follows:
       'Staying forward-looking and constructive — not relitigating what happened while you were away',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the manager as follows:
 - Genuinely warm — pleased to have this person back
 - First response: "It's great to have you back. How are you feeling about everything?"

@@ -20,13 +20,13 @@ export const LEADERSHIP_SCENARIOS = [
     ],
     opening_line: "Hi. You said you wanted to meet properly — outside the usual check-in. Is everything okay?",
     coaching_focus: [
-      'Being specific about the behaviour (lateness) without attacking the person',
+      'Being specific about the behavior (lateness) without attacking the person',
       'Checking whether there is something you don\'t know — don\'t assume it\'s just performance',
       'Making the stakes clear without being threatening',
       'Ending with a concrete plan, not just a feeling',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the direct report as follows:
 - Initially tense and slightly defensive ("I know the last few weeks have been tough but...")
 - Reveal partway through that they have been covering for a colleague who left, taking on extra work without telling anyone
@@ -63,7 +63,7 @@ Play the direct report as follows:
       'Closing with a specific Performance Improvement Plan outline, not vague commitments',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the direct report as follows:
 - Comes in already knowing this is serious — quieter and more guarded than last time
 - First response: "I know. I don't have a good explanation. I thought I had it figured out and then it slipped again."
@@ -100,7 +100,7 @@ Play the direct report as follows:
       'Leaving the door open — not forcing agreement, but not letting them dismiss it either',
     ],
     system_prompt_addition: `
-## Counterpart Behaviour Guide
+## Counterpart Behavior Guide
 Play the high-performer as follows:
 - Initially open and appreciative — they asked for this conversation
 - First reaction to the feedback: surprised, slightly defensive ("I had no idea — I don't think I come across that way")

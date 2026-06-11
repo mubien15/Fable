@@ -48,16 +48,16 @@ const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAI
 // DATA
 // ═══════════════════════════════════════════════
 const ROLES = [
-  { id: 'auditor',    label: 'Auditor / GRC / Compliance',    icon: '🔍', recommended_track: 'audit',      description: 'Practise delivering findings, managing examiners, and holding your position.' },
-  { id: 'consultant', label: 'Consultant / Advisory',          icon: '💼', recommended_track: 'consulting', description: 'Practise client conversations, pitches, and the moments that make or break an engagement.' },
-  { id: 'manager',    label: 'People Manager / Team Lead',     icon: '🤝', recommended_track: 'leadership', description: 'Practise feedback, underperformance, and the conversations most managers avoid until it\'s too late.' },
+  { id: 'auditor',    label: 'Auditor / GRC / Compliance',    icon: 'audit', recommended_track: 'audit',      description: 'Practice delivering findings, managing examiners, and holding your position.' },
+  { id: 'consultant', label: 'Consultant / Advisory',          icon: 'consulting', recommended_track: 'consulting', description: 'Practice client conversations, pitches, and the moments that make or break an engagement.' },
+  { id: 'manager',    label: 'People Manager / Team Lead',     icon: 'leadership', recommended_track: 'leadership', description: 'Practice feedback, underperformance, and the conversations most managers avoid until it\'s too late.' },
   { id: 'all',        label: 'All of the above / Other',       icon: '⊞', recommended_track: null,         description: 'You wear a lot of hats. We\'ve got scenarios for all of them.' },
 ]
 
 const SCENARIO_CHIPS = [
-  { id: 'interview',  label: 'Job Interview', icon: '💼' },
-  { id: 'friend',     label: 'Difficult Friend', icon: '🤝' },
-  { id: 'feelings',   label: 'Express Feelings', icon: '💛' },
+  { id: 'interview',  label: 'Job Interview' },
+  { id: 'friend',     label: 'Difficult Friend' },
+  { id: 'feelings',   label: 'Express Feelings' },
 ]
 
 const MISSIONS = [
@@ -136,7 +136,7 @@ function lsSet(key, val) {
 function PrivacyNote() {
   return (
     <p style={{ color: C.inkSoft, fontSize: 12, textAlign: 'center', marginTop: 24, lineHeight: 1.5 }}>
-      🔒 Your sessions are private. We never share your conversations.
+      Your sessions are private. We never share your conversations.
     </p>
   )
 }
@@ -386,7 +386,7 @@ function NavIcon({ id, color }) {
         </svg>
       )
     case 'rehearse':
-      // A sparkle — signals the personalised / custom-built moment.
+      // A sparkle — signals the personalized / custom-built moment.
       return (
         <svg {...common}>
           <path d="M12 3c.45 4 1.55 5.1 5.5 5.5-3.95.4-5.05 1.5-5.5 5.5-.45-4-1.55-5.1-5.5-5.5C9.45 8.1 10.55 7 12 3Z" />
@@ -408,6 +408,124 @@ function NavIcon({ id, color }) {
           <path d="M7.5 20v-5" />
           <path d="M12 20V8.5" />
           <path d="M16.5 20v-8" />
+        </svg>
+      )
+    default:
+      return null
+  }
+}
+
+// Line icons for content areas — same visual language as NavIcon (thin
+// stroke, currentColor) so tracks, daily rep and coach modes match the nav.
+function LineIcon({ id, color = C.blue, size = 22 }) {
+  const common = {
+    width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
+    stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round',
+  }
+  switch (id) {
+    case 'audit': // magnifying glass
+      return (
+        <svg {...common}>
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m15.5 15.5 5 5" />
+        </svg>
+      )
+    case 'consulting': // briefcase
+    case 'work':
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="7.5" width="17" height="12" rx="2" />
+          <path d="M8.5 7.5v-2a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v2" />
+          <path d="M3.5 12.5h17" />
+        </svg>
+      )
+    case 'career': // upward trend arrow
+      return (
+        <svg {...common}>
+          <path d="m3.5 17 6-6 3.5 3.5L20 7.5" />
+          <path d="M14.5 7.5H20V13" />
+        </svg>
+      )
+    case 'leadership': // two people
+    case 'relationships':
+      return (
+        <svg {...common}>
+          <circle cx="9" cy="8" r="3.2" />
+          <path d="M3.5 19.5c.5-3.2 2.7-4.8 5.5-4.8s5 1.6 5.5 4.8" />
+          <circle cx="17" cy="9" r="2.5" />
+          <path d="M16 14.6c2.5.2 4.1 1.7 4.5 4.4" />
+        </svg>
+      )
+    case 'target': // bullseye — Daily Rep
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="4.7" />
+          <circle cx="12" cy="12" r="1.1" />
+        </svg>
+      )
+    case 'compass': // Coach: situation to work through
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="m15.2 8.8-1.9 5.3-5.3 1.9 1.9-5.3z" />
+        </svg>
+      )
+    case 'thought': // thought bubble — Coach: just need to think
+      return (
+        <svg {...common}>
+          <path d="M12 4.5c4.3 0 7.5 2.5 7.5 5.8s-3.2 5.8-7.5 5.8c-.9 0-1.8-.1-2.6-.3l-3.1 1.4.8-2.5c-1.6-1.1-2.6-2.7-2.6-4.4 0-3.3 3.2-5.8 7.5-5.8Z" />
+          <circle cx="6.2" cy="20" r="1" />
+        </svg>
+      )
+    case 'family': // heart
+      return (
+        <svg {...common}>
+          <path d="M12 20s-7.3-4.8-7.3-9.6C4.7 7.4 6.7 6 8.7 6c1.4 0 2.6.7 3.3 1.9C12.7 6.7 13.9 6 15.3 6c2 0 4 1.4 4 4.4C19.3 15.2 12 20 12 20Z" />
+        </svg>
+      )
+    case 'clarity': // eye — seeing clearly
+      return (
+        <svg {...common}>
+          <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      )
+    case 'idea': // lightbulb — hints
+      return (
+        <svg {...common}>
+          <path d="M12 3a6 6 0 0 0-3.4 10.9c.7.5 1.1 1.3 1.1 2.1h4.6c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3Z" />
+          <path d="M9.8 19h4.4" />
+          <path d="M10.5 21.5h3" />
+        </svg>
+      )
+    case 'mic': // microphone — voice mode
+      return (
+        <svg {...common}>
+          <rect x="9" y="2.5" width="6" height="11" rx="3" />
+          <path d="M5.5 11a6.5 6.5 0 0 0 13 0" />
+          <path d="M12 17.5v3" />
+        </svg>
+      )
+    case 'lock': // padlock
+      return (
+        <svg {...common}>
+          <rect x="5" y="10.5" width="14" height="10" rx="2" />
+          <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+        </svg>
+      )
+    case 'chat': // generic conversation session
+      return (
+        <svg {...common}>
+          <path d="M20 13.5a2 2 0 0 1-2 2H9l-4 3.5V6a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2Z" />
+          <path d="M8.5 9.5h7" />
+          <path d="M8.5 12.5h4.5" />
+        </svg>
+      )
+    case 'flame': // streak
+      return (
+        <svg {...common}>
+          <path d="M12 3c.6 2.8 1.9 4.4 3.7 6.1A6.3 6.3 0 0 1 18 13.6 6 6 0 0 1 6 13.6c0-1.6.6-3 1.7-4.2.4 1 .9 1.7 1.8 2.3C9.4 8.5 10.4 5.6 12 3Z" />
         </svg>
       )
     default:
@@ -507,7 +625,7 @@ function Onboard1({ onNext }) {
           The conversations that matter most deserve more than improvisation.
         </h1>
         <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
-          Fable helps professionals in regulated industries practise the high-stakes conversations that define careers — before they have to have them for real.
+          Fable helps professionals in regulated industries practice the high-stakes conversations that define careers — before they have to have them for real.
         </p>
       </div>
 
@@ -531,7 +649,7 @@ function Onboard1({ onNext }) {
         autoFocus
       />
       <Btn onClick={() => name.trim() && onNext(name.trim())} disabled={!name.trim()}>
-        Start practising →
+        Start practicing →
       </Btn>
       <PrivacyNote />
     </div>
@@ -548,7 +666,7 @@ function Onboard2({ name, onNext }) {
           Good to meet you, {name}.
         </h1>
         <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
-          Who do you show up as at work? We'll personalise your practice to the conversations that matter most in your world.
+          Who do you show up as at work? We'll personalize your practice to the conversations that matter most in your world.
         </p>
       </div>
 
@@ -564,7 +682,7 @@ function Onboard2({ name, onNext }) {
               transition: 'all .15s', display: 'flex', alignItems: 'flex-start', gap: 12,
             }}
           >
-            <span style={{ fontSize: 20, marginTop: 2, flexShrink: 0 }}>{r.icon}</span>
+            <span style={{ marginTop: 2, flexShrink: 0, display: 'flex' }}><LineIcon id={r.icon} color={C.blue} size={21} /></span>
             <div style={{ textAlign: 'left' }}>
               <p style={{ fontFamily: SANS, fontSize: 15, fontWeight: 600, color: choice === r.id ? C.coral : C.ink, marginBottom: 3 }}>
                 {r.label}
@@ -667,35 +785,34 @@ function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onRe
           {user.name}
         </h1>
         <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.5 }}>
-          What conversation will you practise today?
+          What conversation will you practice today?
         </p>
       </div>
 
       {/* ── Daily Practice ── */}
       <div style={{ marginBottom: 28 }}>
         <SectionLabel>Daily Practice</SectionLabel>
-        {completedCount === 0 && (
-          <div style={{ background: C.ink, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
-            <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
-              "30 days. 30 real conversations. Identify the habits holding you back."
-            </p>
-          </div>
-        )}
+        <div style={{ background: C.ink, borderRadius: 16, padding: '16px 20px', marginBottom: 12 }}>
+          <p style={{ fontFamily: SERIF, color: '#F8FAFC', fontSize: 14, lineHeight: 1.7, fontStyle: 'italic' }}>
+            "{DAILY_REP_PROGRAM[(dailyRep.currentDay || 1) - 1]?.insight
+              || '30 days. 30 real conversations. Identify the habits holding you back.'}"
+          </p>
+        </div>
         <Card style={{ background: C.surface }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
             <div style={{
               width: 44, height: 44, borderRadius: 12, flexShrink: 0,
               background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-            }}>🎯</div>
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}><LineIcon id="target" color="#fff" size={22} /></div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
                 <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase' }}>
                   DAILY REP · DAY {dailyRep.currentDay || 1} · {currentDayData?.phase_label?.toUpperCase()}
                 </p>
                 {streak > 0 && (
-                  <span style={{ fontFamily: SANS, fontSize: 10, color: C.coral, background: C.coralBg, padding: '1px 7px', borderRadius: 20, fontWeight: 700 }}>
-                    🔥 {streak} streak
+                  <span style={{ fontFamily: SANS, fontSize: 10, color: C.coral, background: C.coralBg, padding: '1px 7px', borderRadius: 20, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    <LineIcon id="flame" color={C.coral} size={11} /> {streak} streak
                   </span>
                 )}
               </div>
@@ -737,7 +854,7 @@ function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onRe
           onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.06)' }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 22, marginTop: 2, flexShrink: 0 }}>{track.icon}</span>
+            <span style={{ marginTop: 2, flexShrink: 0, display: 'flex' }}><LineIcon id={track.id} color={C.blue} size={24} /></span>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontFamily: SERIF, fontSize: 17, fontWeight: 600, color: C.blue, marginBottom: 4 }}>
                 {track.title}
@@ -766,16 +883,16 @@ function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onRe
               ? rehearsals.find((r) => r.id === (s.rehearsalId || s.scenario))
               : null
             const chip = (s.rehearsalId || rehearsal || s.title)
-              ? { icon: '✦', label: s.title || rehearsal?.title || 'Rehearsal' }
+              ? { icon: <span style={{ color: C.coral, fontSize: 18 }}>✦</span>, label: s.title || rehearsal?.title || 'Rehearsal' }
               : trackMatch
-                ? { icon: trackMatch.track.icon, label: trackMatch.scenario.title }
-                : SCENARIO_CHIPS.find((c) => c.id === s.scenario) || { icon: '💬', label: s.scenario || 'Session' }
+                ? { icon: <LineIcon id={trackMatch.track.id} color={C.blue} size={20} />, label: trackMatch.scenario.title }
+                : { icon: <LineIcon id="chat" color={C.blue} size={20} />, label: SCENARIO_CHIPS.find((c) => c.id === s.scenario)?.label || s.scenario || 'Session' }
             return (
               <div key={s.id} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 0', borderBottom: `1px solid ${C.border}`,
               }}>
-                <span style={{ fontSize: 20, flexShrink: 0 }}>{chip.icon}</span>
+                <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{chip.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{
                     fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, marginBottom: 2,
@@ -805,12 +922,14 @@ function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onRe
 // COACH EXPERIENCE — CONSTANTS
 // ═══════════════════════════════════════════════
 const LIFE_AREAS = [
-  { id: 'work',          icon: '💼', label: 'Work & Career'    },
-  { id: 'relationships', icon: '🤝', label: 'Relationships'    },
-  { id: 'family',        icon: '👨‍👩‍👧', label: 'Family'          },
-  { id: 'clarity',       icon: '🧠', label: 'Personal Clarity' },
+  { id: 'work',          icon: 'work',          label: 'Work & Career'    },
+  { id: 'relationships', icon: 'relationships', label: 'Relationships'    },
+  { id: 'family',        icon: 'family',        label: 'Family'          },
+  { id: 'clarity',       icon: 'clarity',       label: 'Personal Clarity' },
 ]
-const AREA_META = { work: '💼', relationships: '🤝', family: '👨‍👩‍👧', clarity: '🧠', thinking: '💭' }
+// Maps a life area to its LineIcon id (sessions may also carry legacy emoji
+// strings in lifeAreaIcon — render sites fall back to the area id instead).
+const AREA_META = { work: 'work', relationships: 'relationships', family: 'family', clarity: 'clarity', thinking: 'thought' }
 
 const SITUATION_QUESTIONS = {
   work:          "What's the work situation on your mind? Describe it as if you're telling a trusted colleague.",
@@ -833,7 +952,10 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
       padding: '24px', marginBottom: 14, boxShadow: '0 1px 3px rgba(0,0,0,.06)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-        <span style={{ fontSize: 26 }}>{icon}</span>
+        <span style={{
+          width: 44, height: 44, borderRadius: 12, background: C.coralBg, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}><LineIcon id={icon} color={C.coral} size={24} /></span>
         <p style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600, color: C.blue, lineHeight: 1.2 }}>{title}</p>
       </div>
       <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, lineHeight: 1.65, marginBottom: 20 }}>{desc}</p>
@@ -843,6 +965,10 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
 
   return (
     <div className="fade-up" style={{ padding: '36px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+      <p style={{
+        fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: '.08em',
+        textTransform: 'uppercase', color: C.inkSoft, marginBottom: 8,
+      }}>Coach</p>
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, marginBottom: 6, lineHeight: 1.3 }}>
         Not every hard conversation fits a scenario.
       </h1>
@@ -851,14 +977,14 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
       </p>
 
       <ModeCard
-        icon="🎯"
+        icon="compass"
         title="I have a situation to work through"
         desc="A conversation coming up, a decision you're stuck on, or something you need to prepare for. Walk through it with your coach."
         btnLabel="Let's work on it →"
         mode="specific"
       />
       <ModeCard
-        icon="💭"
+        icon="thought"
         title="I just need to think"
         desc="No agenda. Something is sitting with you and you're not sure what you need yet. Just start."
         btnLabel="Start talking →"
@@ -872,7 +998,7 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
           </p>
           {coachSessions.map((s) => (
             <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 18, flexShrink: 0 }}>{s.lifeAreaIcon || '💭'}</span>
+              <span style={{ flexShrink: 0, display: 'flex' }}><LineIcon id={AREA_META[s.lifeArea] || 'thought'} color={C.blue} size={19} /></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {s.label || 'Coaching session'}
@@ -914,7 +1040,7 @@ function CoachAreaScreen({ setScreen, onSelectArea }) {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.background = C.blueBg }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.surface }}
           >
-            <span style={{ fontSize: 30, display: 'block', marginBottom: 10 }}>{area.icon}</span>
+            <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}><LineIcon id={area.icon} color={C.blue} size={28} /></span>
             <p style={{ fontFamily: SANS, fontSize: 14, fontWeight: 600, color: C.ink, lineHeight: 1.3 }}>{area.label}</p>
           </button>
         ))}
@@ -1097,7 +1223,7 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
     inputRef.current?.focus()
   }
 
-  const areaIcon  = AREA_META[coachSession?.lifeArea || 'thinking'] || '💭'
+  const areaIcon  = AREA_META[coachSession?.lifeArea || 'thinking'] || 'thought'
   const areaLabel = coachSession?.situationLabel || (coachSession?.mode === 'thinking' ? 'Thinking out loud' : 'Personal session')
 
   return (
@@ -1108,8 +1234,8 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
         <CoachAvatar size={32} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 14 }}>Coach</p>
-          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {areaIcon} {areaLabel}
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <LineIcon id={areaIcon} color={C.inkSoft} size={13} /> {areaLabel}
           </p>
         </div>
         <button
@@ -1243,7 +1369,7 @@ function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) 
       date: new Date().toLocaleDateString(),
       mode: coachSession?.mode,
       lifeArea: coachSession?.lifeArea,
-      lifeAreaIcon: AREA_META[coachSession?.lifeArea] || '💭',
+      lifeAreaIcon: AREA_META[coachSession?.lifeArea] || 'thought',
       label: coachSession?.situationLabel || 'Coaching session',
       messages: coachSession?.messages || [],
       reflection,
@@ -1274,14 +1400,14 @@ function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) 
         <>
           <Card bg={C.blueBg} border={C.blueDim} style={{ marginBottom: 14 }}>
             <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.blue, letterSpacing: '.06em', marginBottom: 8 }}>
-              📝 ONE THING THAT STOOD OUT
+              ONE THING THAT STOOD OUT
             </p>
             <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>{debrief?.insight}</p>
           </Card>
 
           <Card bg={C.tealBg} border="transparent" style={{ marginBottom: 24 }}>
             <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.teal, letterSpacing: '.06em', marginBottom: 8 }}>
-              💡 SOMETHING TO CARRY FORWARD
+              SOMETHING TO CARRY FORWARD
             </p>
             <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65 }}>{debrief?.nextStep}</p>
           </Card>
@@ -1355,7 +1481,7 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <CoachAvatar size={28} />
           <span style={{ fontFamily: SANS, color: C.coral, fontSize: 11, fontWeight: 700, letterSpacing: '.06em' }}>
-            YOUR SCENARIO {chip ? `· ${chip.icon} ${chip.label}` : ''}
+            YOUR SCENARIO {chip ? `· ${chip.label}` : ''}
           </span>
         </div>
         <p style={{ fontFamily: SERIF, color: C.ink, fontSize: 15, lineHeight: 1.65, fontStyle: 'italic' }}>
@@ -1898,7 +2024,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           }),
         })
         const debrief = await res.json()
-        const summary = debrief.overall_summary || 'Session complete — good work showing up to practise.'
+        const summary = debrief.overall_summary || 'Session complete — good work showing up to practice.'
         const finalMsgs = [...next, { role: 'coach', content: summary }]
         setMessages(finalMsgs)
         setDone(true)
@@ -2080,7 +2206,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           }}
           title={voiceEnabled ? 'Switch to text mode' : 'Switch to voice mode'}
         >
-          {voiceEnabled ? '🔊 Voice' : '💬 Text'}
+          {voiceEnabled ? 'Voice' : 'Text'}
         </button>
         <button
           onClick={() => handleEnd()}
@@ -2102,9 +2228,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
             {m.role === 'coach' && <CoachAvatar size={26} />}
             {m.role === 'hint' && (
               <div style={{
-                fontSize: 16, flexShrink: 0, width: 26, height: 26,
+                flexShrink: 0, width: 26, height: 26,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>💡</div>
+              }}><LineIcon id="idea" color={C.coral} size={17} /></div>
             )}
             <div style={{
               maxWidth: '80%', padding: '10px 14px', borderRadius: 16,
@@ -2160,7 +2286,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
                 padding: '2px 8px',
               }}
             >
-              {hintLoading ? 'Getting hint…' : '💡 Not sure what to say? Get a hint'}
+              {hintLoading ? 'Getting hint…' : 'Not sure what to say? Get a hint'}
             </button>
           </div>
         )}
@@ -2181,7 +2307,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
                 fontFamily: SANS, fontSize: 11, color: '#B91C1C',
                 maxWidth: 320, textAlign: 'left', lineHeight: 1.4,
               }}>
-                🔇 {ttsError}
+                {ttsError}
               </div>
             )}
 
@@ -2468,9 +2594,14 @@ function useProgressData(sessions, dailyRep, completedData) {
     s => s.completed && s.scenario && !s.scenario.startsWith('daily-rep-day') && s.scenario !== 'storylab'
   )
 
-  const totalReps       = sessions.filter(s => s.completed).length
+  // A session only counts as a rep once its debrief is completed — otherwise
+  // REPS, AVG RATING and strengths would tell inconsistent stories.
+  // Debriefs live on the session itself (coach / legacy feedback) or in
+  // completedData keyed by scenario id (track scenarios & rehearsals).
+  const hasDebrief      = s => !!(s.debrief || s.feedback || cdObj[s.scenario]?.debrief)
+  const totalReps       = sessions.filter(s => s.completed && hasDebrief(s)).length
   const thirtyDaysAgo   = Date.now() - 30 * 24 * 60 * 60 * 1000
-  const repsThisMonth   = sessions.filter(s => s.id > thirtyDaysAgo && s.completed).length
+  const repsThisMonth   = sessions.filter(s => s.id > thirtyDaysAgo && s.completed && hasDebrief(s)).length
 
   // Ratings from saved debriefs
   const ratings = Object.values(cdObj).map(s => s.debrief?.overall_rating).filter(Boolean)
@@ -2565,17 +2696,17 @@ function FocusBar({ area, avg, type }) {
 function TrackBreakdown({ trackCounts }) {
   const total  = Object.values(trackCounts).reduce((a, b) => a + b, 0) || 1
   const tracks = [
-    { id: 'audit',       label: 'Audit & Compliance',       icon: '🔍', color: C.blueDeep },
-    { id: 'consulting',  label: 'Consulting & Client Work',  icon: '💼', color: C.coral    },
-    { id: 'career',      label: 'Career & Self-Advocacy',    icon: '🚀', color: '#7C4DFF'  },
-    { id: 'leadership',  label: 'People Leadership',         icon: '🤝', color: C.teal     },
+    { id: 'audit',       label: 'Audit & Compliance',       color: C.blueDeep },
+    { id: 'consulting',  label: 'Consulting & Client Work',  color: C.coral    },
+    { id: 'career',      label: 'Career & Self-Advocacy',    color: '#7C4DFF'  },
+    { id: 'leadership',  label: 'People Leadership',         color: C.teal     },
   ]
   return (
     <div style={{ marginBottom: 28 }}>
       {tracks.map(t => (
         <div key={t.id} style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-            <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid }}>{t.icon} {t.label}</p>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid, display: 'flex', alignItems: 'center', gap: 6 }}><LineIcon id={t.id} color={C.inkMid} size={14} /> {t.label}</p>
             <span style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint }}>{trackCounts[t.id]}</span>
           </div>
           <div style={{ height: 6, background: C.border, borderRadius: 4, overflow: 'hidden' }}>
@@ -2676,7 +2807,13 @@ function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
         const rehearsal = (s.rehearsalId || (typeof s.scenario === 'string' && s.scenario.startsWith('r_')))
           ? rehearsals.find(r => r.id === (s.rehearsalId || s.scenario))
           : null
-        const icon   = match?.track.icon || (s.isDailyRep ? '🎯' : rehearsal ? '✦' : '💬')
+        const icon   = match
+          ? <LineIcon id={match.track.id} color={C.blue} size={19} />
+          : s.isDailyRep
+            ? <LineIcon id="target" color={C.blue} size={19} />
+            : (rehearsal || s.rehearsalId || s.title)
+              ? <span style={{ color: C.coral, fontSize: 17 }}>✦</span>
+              : <LineIcon id="chat" color={C.blue} size={19} />
         const label  = match?.scenario.title
           || s.title
           || rehearsal?.title
@@ -2685,7 +2822,7 @@ function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
         const d      = new Date(s.id)
         return (
           <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+            <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontFamily: SANS, color: C.ink, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</p>
               <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 11 }}>
@@ -2768,7 +2905,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
         </p>
         <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkSoft, lineHeight: 1.65, marginBottom: 32 }}>
           Strengths. Patterns. Growth over time.<br />
-          The picture gets clearer the more you practise.
+          The picture gets clearer the more you practice.
         </p>
         <Btn onClick={() => { setScreen('daily-rep') }}>Start your first rep →</Btn>
       </div>
@@ -2809,7 +2946,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           </p>
         ) : (
           <p style={{ fontFamily: SERIF, fontSize: 14, color: C.inkSoft, fontStyle: 'italic', lineHeight: 1.65 }}>
-            Keep practising — your profile will sharpen with each session.
+            Keep practicing — your profile will sharpen with each session.
           </p>
         )}
       </div>
@@ -3014,7 +3151,7 @@ function DailyRepBriefingScreen({ day, scenario, setScreen, onBegin, onChooseSce
           {/* Coaching focus */}
           <div style={{ marginBottom: 18 }}>
             <p style={{ fontFamily: SANS, color: C.blueDeep, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 10 }}>
-              What you'll practise
+              What you'll practice
             </p>
             {(scenario.coaching_focus || []).map((f, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
@@ -3243,7 +3380,7 @@ function DailyRepScreen({ dailyRep, setScreen, onStartDay }) {
                           {d.focus}
                         </p>
                       ) : (
-                        <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>🔒 Complete Day {d.day - 1} first</p>
+                        <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>Complete Day {d.day - 1} first</p>
                       )}
                     </div>
 
@@ -3284,7 +3421,7 @@ function StorylabScreen({ storylab, setStorylab, setScreen, onStartMission }) {
         </p>
         <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 4 }}>Storylab</h1>
         <p style={{ color: C.inkSoft, fontSize: 14, lineHeight: 1.6 }}>
-          30 days of daily storytelling practise. Each session takes 10–15 minutes.
+          30 days of daily storytelling practice. Each session takes 10–15 minutes.
         </p>
       </div>
 
@@ -3347,7 +3484,7 @@ function StorylabScreen({ storylab, setStorylab, setScreen, onStartMission }) {
                   </p>
                 )}
                 {isLocked && (
-                  <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>🔒 Coming soon</p>
+                  <p style={{ fontFamily: SANS, color: C.inkFaint, fontSize: 12 }}>Coming soon</p>
                 )}
               </div>
 
@@ -3415,13 +3552,13 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
           <div style={{
             width: 48, height: 48, borderRadius: 12, background: C.coralBg,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 22, flexShrink: 0,
+            flexShrink: 0,
           }}>
-            {track.icon}
+            <LineIcon id={track.id} color={C.coral} size={24} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16 }}>
+              <p style={{ fontFamily: SERIF, fontWeight: 600, color: C.blue, fontSize: 17 }}>
                 {track.title}
               </p>
               {track.id === recommendedId && (
@@ -3431,7 +3568,7 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
                 }}>FOR YOU</span>
               )}
             </div>
-            <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
+            <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
               {track.description}
             </p>
             <span style={{
@@ -3462,11 +3599,11 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
           width: 48, height: 48, borderRadius: 12,
           background: `linear-gradient(135deg, ${C.coral}, ${C.coralLight})`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22, flexShrink: 0,
-        }}>🎯</div>
+          flexShrink: 0,
+        }}><LineIcon id="target" color="#fff" size={24} /></div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontFamily: SANS, fontWeight: 700, color: C.ink, fontSize: 16, marginBottom: 4 }}>Daily Rep</p>
-          <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
+          <p style={{ fontFamily: SERIF, fontWeight: 600, color: C.blue, fontSize: 17, marginBottom: 4 }}>Daily Rep</p>
+          <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 14, lineHeight: 1.55, marginBottom: 10 }}>
             30 days of professional conversation practice. One rep a day builds mastery.
           </p>
           <span style={{
@@ -3566,7 +3703,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                       <span style={{
                         fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.05em',
                         color: C.inkSoft, background: C.surfaceSubtle, padding: '2px 8px', borderRadius: 20,
-                      }}>🔒 Members only</span>
+                      }}>Members only</span>
                     )}
                   </div>
                   <p style={{
@@ -3599,7 +3736,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                   {/* Resume or Briefing — depends on whether there's a saved conversation */}
                   {isLocked ? (
                     <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
-                      <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 6 }}>🔒 Founding Members only</p>
+                      <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 6 }}>Founding Members only</p>
                       <p style={{ fontFamily: SERIF, fontSize: 13, color: C.inkMid, lineHeight: 1.5, marginBottom: 12 }}>
                         This scenario is part of the full Fable library. Founding members get all 30+ scenarios at a rate locked for life.
                       </p>
@@ -3614,7 +3751,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                     </div>
                   ) : (
                     <Btn onClick={() => onViewBriefing(scenario)}>
-                      {isDone ? 'Practise again →' : 'Start scenario →'}
+                      {isDone ? 'Practice again →' : 'Start scenario →'}
                     </Btn>
                   )}
                 </div>
@@ -3746,12 +3883,12 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
 
       {/* Practice mode picker */}
       <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
-        How do you want to practise?
+        How do you want to practice?
       </p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         {[
-          { id: true,  icon: '🎙', label: 'Voice',     desc: 'Speak & listen — most realistic' },
-          { id: false, icon: '💬', label: 'Text only', desc: 'Type — quieter environments' },
+          { id: true,  icon: 'mic',  label: 'Voice',     desc: 'Speak & listen — most realistic' },
+          { id: false, icon: 'chat', label: 'Text only', desc: 'Type — quieter environments' },
         ].map((opt) => (
           <button
             key={String(opt.id)}
@@ -3764,7 +3901,7 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
               transition: 'all .15s',
             }}
           >
-            <span style={{ fontSize: 16 }}>{opt.icon}</span>
+            <span style={{ display: 'flex' }}><LineIcon id={opt.icon} color={voiceEnabled === opt.id ? C.blue : C.inkSoft} size={17} /></span>
             <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: voiceEnabled === opt.id ? C.blue : C.inkSoft }}>
               {opt.label}
             </span>
@@ -4122,7 +4259,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToSc
         </p>
 
         <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 18, padding: '28px 22px', marginBottom: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 30, marginBottom: 12 }}>🔒</p>
+          <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><LineIcon id="lock" color={C.coral} size={30} /></p>
           <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 10 }}>Founding Members only</p>
           <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.6, marginBottom: 18 }}>
             Rehearse builds a simulation <strong style={{ color: C.coral }}>personalized to you</strong> — your exact situation, the real person you're facing, and what you're worried about. It's part of the full Fable membership.
@@ -5214,7 +5351,7 @@ export default function App() {
   return (
     <>
       <Head>
-        <title>Fable — Your Communication Coach</title>
+        <title>Fable — Practice the conversations that matter</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </Head>
       <div style={{
