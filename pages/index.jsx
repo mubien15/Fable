@@ -542,39 +542,41 @@ function BottomNav({ active, onChange }) {
     { id: 'progress',  label: 'Progress'  },
   ]
   return (
+    // Floating liquid-glass pill: translucent navy with blur + a top sheen,
+    // detached from the screen edges so the safe area shows through beneath.
     <nav style={{
-      position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 420,
-      background: 'rgba(250,247,242,0.92)', backdropFilter: 'blur(12px)',
-      borderTop: `1px solid ${C.border}`,
+      position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+      bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
+      width: 'calc(100% - 24px)', maxWidth: 400,
+      background: 'rgba(28,43,74,0.86)',
+      backdropFilter: 'blur(20px) saturate(1.6)',
+      WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+      border: '1px solid rgba(255,255,255,0.14)',
+      borderRadius: 32,
+      boxShadow: '0 12px 36px rgba(28,43,74,0.38), inset 0 1px 0 rgba(255,255,255,0.16)',
       display: 'flex', zIndex: 200,
-      // Standalone (home-screen app) mode can report a tiny/zero safe-area inset,
-      // which left the labels too close to the edge. Add a comfortable base of
-      // 24px ON TOP of whatever inset exists, so tabs always clear the bottom.
-      paddingBottom: 'calc(24px + env(safe-area-inset-bottom, 0px))', paddingTop: 10,
+      padding: '8px 8px',
     }}>
       {tabs.map((t) => {
-        const color = active === t.id ? C.coral : C.inkFaint
+        const isActive = active === t.id
+        const color = isActive ? '#FFB4A3' : 'rgba(255,255,255,0.6)'
         return (
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
             style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              background: 'none', border: 'none', padding: '4px 0', position: 'relative',
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              background: isActive ? 'rgba(255,255,255,0.12)' : 'none',
+              border: 'none', padding: '7px 0 6px', borderRadius: 24,
+              boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.18)' : 'none',
+              transition: 'background .25s ease',
             }}
           >
-            {active === t.id && (
-              <div style={{
-                position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-                width: 22, height: 2.5, borderRadius: 2, background: C.coral,
-              }} />
-            )}
             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 23 }}>
               <NavIcon id={t.id} color={color} />
             </span>
             <span style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '.05em', fontFamily: SANS, color,
+              fontSize: 9.5, fontWeight: 700, letterSpacing: '.05em', fontFamily: SANS, color,
             }}>
               {t.label.toUpperCase()}
             </span>
