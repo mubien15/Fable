@@ -77,6 +77,39 @@ const MISSIONS = [
 // HELPERS
 // ═══════════════════════════════════════════════
 
+// ─── Filler-word KPIs ────────────────────────────────────────────────────────
+// Deterministic counts from the user's own transcript (voice → Whisper text,
+// or typed). Powers the "Delivery" numbers in the debrief and Progress tab.
+// "like" only counts in its discourse-marker position (next to a comma) so
+// legitimate uses ("I'd like to…") aren't flagged.
+const FILLER_PATTERNS = [
+  { label: 'um',        re: /\b(?:u+m+|uh+m+|eh+m+)\b/gi },
+  { label: 'uh / er',   re: /\b(?:u+hh*|e+hh+|er+m?)\b/gi },
+  { label: 'like',      re: /(?:,\s*like\b|\blike\s*,)/gi },
+  { label: 'you know',  re: /\byou know\b/gi },
+  { label: 'I mean',    re: /\bI mean\b/gi },
+  { label: 'kind of',   re: /\b(?:kind|sort) of\b/gi },
+  { label: 'basically', re: /\bbasically\b/gi },
+  { label: 'actually',  re: /\bactually\b/gi },
+  { label: 'literally', re: /\bliterally\b/gi },
+]
+
+function countFillerWords(messages) {
+  const text = (messages || [])
+    .filter(m => m.role === 'user')
+    .map(m => m.content || '')
+    .join(' ')
+  const words = (text.match(/[\w’']+/g) || []).length
+  const counts = []
+  let total = 0
+  FILLER_PATTERNS.forEach(({ label, re }) => {
+    const n = (text.match(re) || []).length
+    if (n > 0) { counts.push({ label, n }); total += n }
+  })
+  counts.sort((a, b) => b.n - a.n)
+  return { counts, total, words, per100: words > 0 ? (total / words) * 100 : 0 }
+}
+
 // Find a scenario + its parent track from ALL_TRACKS by scenario id
 function findTrackScenario(scenarioId) {
   for (const track of ALL_TRACKS) {
@@ -1376,6 +1409,7 @@ function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) 
       lifeAreaIcon: AREA_META[coachSession?.lifeArea] || 'thought',
       label: coachSession?.situationLabel || 'Coaching session',
       messages: coachSession?.messages || [],
+      fillerStats: countFillerWords(coachSession?.messages),
       reflection,
       debrief,
       completed: true,
@@ -2105,6 +2139,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       rehearsalId: session?.rehearsalId || null,
       context: session?.context,
       messages: msgs,
+      fillerStats: countFillerWords(msgs),
       userMessage: session?.userMessage,
       feedback: session?.feedback,
       isDailyRep: session?.isDailyRep || false,
@@ -2667,7 +2702,33 @@ function useProgressData(sessions, dailyRep, completedData) {
         : null,
     }))
 
+  // Filler-word KPIs across completed sessions (oldest → newest). Stored
+  // stats preferred; legacy sessions fall back to counting their messages.
+  const fillerSessions = sessions
+    .filter(s => s.completed)
+    .map(s => s.fillerStats || (s.messages?.length ? countFillerWords(s.messages) : null))
+    .filter(f => f && f.words >= 20)
+  const fillerWordsTotal = fillerSessions.reduce((a, f) => a + f.total, 0)
+  const spokenWordsTotal = fillerSessions.reduce((a, f) => a + f.words, 0)
+  const fillerPer100 = spokenWordsTotal > 0 ? (fillerWordsTotal / spokenWordsTotal) * 100 : null
+  const fillerTotals = {}
+  fillerSessions.forEach(f => f.counts.forEach(c => { fillerTotals[c.label] = (fillerTotals[c.label] || 0) + c.n }))
+  const topFiller = Object.entries(fillerTotals).sort((a, b) => b[1] - a[1])[0] || null
+  // Trend: last 3 sessions vs the 3 before them
+  let fillerTrend = null
+  if (fillerSessions.length >= 4) {
+    const rate = arr => {
+      const w = arr.reduce((a, f) => a + f.words, 0)
+      return w > 0 ? arr.reduce((a, f) => a + f.total, 0) / w * 100 : 0
+    }
+    const recent = rate(fillerSessions.slice(-3))
+    const before = rate(fillerSessions.slice(-6, -3))
+    fillerTrend = recent < before - 0.3 ? 'down' : recent > before + 0.3 ? 'up' : 'flat'
+  }
+
   return {
+    fillerPer100, fillerWordsTotal, spokenWordsTotal, topFiller, fillerTrend,
+    fillerSessionCount: fillerSessions.length,
     totalReps, repsThisMonth, avgRating,
     streak: dailyRep?.streak || 0,
     longestStreak: dailyRep?.longestStreak || 0,
@@ -2969,6 +3030,42 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           </div>
         ))}
       </div>
+
+      {/* ── Delivery KPIs (filler words, counted from transcripts) ────────── */}
+      {progress.fillerPer100 !== null && (
+        <>
+          <SL>Delivery</SL>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px', marginBottom: 28 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 5 }}>
+                  {progress.fillerPer100.toFixed(1)}
+                </p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>Fillers / 100 words</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 5 }}>
+                  {progress.fillerWordsTotal}
+                </p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>Total fillers</p>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: progress.fillerTrend === 'down' ? C.teal : progress.fillerTrend === 'up' ? C.coral : C.ink, lineHeight: 1, marginBottom: 5 }}>
+                  {progress.fillerTrend === 'down' ? '▼' : progress.fillerTrend === 'up' ? '▲' : '—'}
+                </p>
+                <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>Trend</p>
+              </div>
+            </div>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, lineHeight: 1.55 }}>
+              {progress.topFiller
+                ? <>Your most common filler is <strong style={{ color: C.coral }}>“{progress.topFiller[0]}”</strong> — used {progress.topFiller[1]} time{progress.topFiller[1] === 1 ? '' : 's'} across {progress.fillerSessionCount} session{progress.fillerSessionCount === 1 ? '' : 's'} ({progress.spokenWordsTotal.toLocaleString()} words).</>
+                : <>No filler words detected across {progress.fillerSessionCount} session{progress.fillerSessionCount === 1 ? '' : 's'} — clean delivery.</>}
+              {progress.fillerTrend === 'down' && ' Trending down over your last sessions — keep it up.'}
+              {progress.fillerTrend === 'up' && ' Trending up over your last sessions — slow down before you speak.'}
+            </p>
+          </div>
+        </>
+      )}
 
       {/* ── Strengths ─────────────────────────────────────────────────────── */}
       {progress.strengths.length > 0 && (
@@ -4058,6 +4155,45 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
 
           {/* Try this instead */}
           <SectionCard label="Try this instead" content={debrief.try_this_instead} bg={C.surface} border={C.border} labelColor={C.inkSoft} />
+
+          {/* Delivery KPIs — deterministic counts from the transcript */}
+          {(() => {
+            const f = countFillerWords(messages)
+            if (f.words < 20) return null
+            const clean = f.total === 0
+            return (
+              <Card bg={C.surface} border={C.border} style={{ marginBottom: 12 }}>
+                <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: C.inkFaint, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 12 }}>
+                  Delivery — by the numbers
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: clean ? 4 : 12 }}>
+                  {[
+                    { val: f.total, label: 'Filler words' },
+                    { val: f.per100.toFixed(1), label: 'Per 100 words' },
+                    { val: f.words, label: 'Words spoken' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: C.surfaceSubtle, borderRadius: 10, padding: '12px 6px', textAlign: 'center' }}>
+                      <p style={{ fontFamily: SERIF, fontSize: 22, fontWeight: 700, color: clean && s.label === 'Filler words' ? C.teal : C.ink, lineHeight: 1, marginBottom: 4 }}>{s.val}</p>
+                      <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {clean ? (
+                  <p style={{ fontFamily: SANS, fontSize: 12, color: C.teal, lineHeight: 1.5 }}>
+                    No filler words detected — clean, deliberate delivery.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {f.counts.map(c => (
+                      <span key={c.label} style={{ fontFamily: SANS, fontSize: 12, padding: '4px 10px', borderRadius: 20, background: C.coralBg, color: C.coral, fontWeight: 600 }}>
+                        “{c.label}” ×{c.n}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )
+          })()}
 
           {/* Speech observations */}
           {debrief.speech_observations && (
