@@ -2726,7 +2726,12 @@ function useProgressData(sessions, dailyRep, completedData) {
     fillerTrend = recent < before - 0.3 ? 'down' : recent > before + 0.3 ? 'up' : 'flat'
   }
 
+  // Any finished session (debrief or not) — gates the Progress empty state,
+  // while totalReps stays debrief-only for the KPI story.
+  const completedSessions = sessions.filter(s => s.completed).length
+
   return {
+    completedSessions,
     fillerPer100, fillerWordsTotal, spokenWordsTotal, topFiller, fillerTrend,
     fillerSessionCount: fillerSessions.length,
     totalReps, repsThisMonth, avgRating,
@@ -2958,7 +2963,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
   )
 
   // ── Empty state ────────────────────────────────────────────────────────────
-  if (progress.totalReps === 0) {
+  if (progress.completedSessions === 0 && rehearsals.length === 0) {
     return (
       <div className="fade-up" style={{ padding: '60px 28px calc(120px + env(safe-area-inset-bottom, 0px))', textAlign: 'center' }}>
         <div style={{ fontSize: 40, marginBottom: 20 }}>◈</div>
