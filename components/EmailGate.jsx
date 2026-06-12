@@ -23,8 +23,8 @@ const COLORS = {
   surface: '#FFFFFF',
   green:   '#5AC87A',
 }
-const SERIF = "'Lora', Georgia, serif"
-const SANS  = "'DM Sans', system-ui, -apple-system, sans-serif"
+const SERIF = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+const SANS  = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
 const isValidEmail = (v) => /\S+@\S+\.\S+/.test(v)
 

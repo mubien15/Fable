@@ -39,8 +39,10 @@ const C = {
   // Text
   ink: '#1C2B4A', inkMid: '#2D4070', inkSoft: '#8C7B6B', inkFaint: '#A89B8C',
 }
-const SERIF = "'Lora', Georgia, serif"
-const SANS = "'DM Sans', system-ui, -apple-system, sans-serif"
+// One typeface across the app: the Apple system stack (SF Pro on Apple
+// devices). SERIF is kept as an alias so heading styles keep their weights.
+const SERIF = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+const SANS = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 // Tiny silent WAV used to unlock the audio element on iOS/Safari (user gesture requirement)
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
 

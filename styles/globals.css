@@ -2,7 +2,7 @@
 
 html, body {
   background: #FAF7F2;
-  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   color: #1C2B4A;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;

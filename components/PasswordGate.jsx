@@ -17,8 +17,8 @@ const COLORS = {
   border:  '#E7DECF',
   surface: '#FFFFFF',
 }
-const SERIF = "'Lora', Georgia, serif"
-const SANS  = "'DM Sans', system-ui, -apple-system, sans-serif"
+const SERIF = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+const SANS  = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
 export default function PasswordGate({ children }) {
   // checked: have we read localStorage yet? Prevents a flash of the gate for
