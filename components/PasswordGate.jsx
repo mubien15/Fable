@@ -5,8 +5,8 @@ import { useState, useEffect } from 'react'
 // children immediately. Otherwise shows the gate until the correct code is
 // entered. No page reload — purely React state.
 
-const ACCESS_CODE = 'fablecoach2026'
-const AUTH_KEY    = 'fable_auth'
+const ACCESS_CODE = 'liyana2023'  // compared case-insensitively below
+const AUTH_KEY    = 'fable_auth_v2'  // bumped so old grants don't bypass the new code
 
 // Fable design tokens (kept local so the component is self-contained).
 const COLORS = {
