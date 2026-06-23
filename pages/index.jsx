@@ -4053,15 +4053,15 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
               style={{
                 flex: '1 1 calc(33% - 6px)', minWidth: 0, padding: '10px 6px', borderRadius: 12,
                 border: `1.5px solid ${selected ? C.navy : C.border}`,
-                background: selected ? C.navy : C.surface,
+                background: selected ? 'rgba(28,43,74,0.07)' : C.surface,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 transition: 'all .15s',
               }}
             >
-              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: selected ? '#fff' : C.ink, textAlign: 'center', lineHeight: 1.2 }}>
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: selected ? C.navy : C.inkSoft, textAlign: 'center', lineHeight: 1.2 }}>
                 {opt.label}
               </span>
-              <span style={{ fontFamily: SANS, fontSize: 10, color: selected ? 'rgba(255,255,255,0.65)' : C.inkSoft, textAlign: 'center', lineHeight: 1.3 }}>
+              <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
                 {opt.desc}
               </span>
             </button>
