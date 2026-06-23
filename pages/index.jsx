@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { ALL_TRACKS } from '../data/tracks'
 import { DAILY_REP_PROGRAM } from '../data/daily-rep'
 import {
-  getRehearsals, saveRehearsal, updateRehearsal,
+  getRehearsals, saveRehearsal, updateRehearsal, deleteRehearsal,
   newRehearsalId, rehearseDifficultyToSystem, relativeTime,
 } from '../data/rehearsals'
 
@@ -4437,7 +4437,7 @@ const REHEARSE_PERSONA_STYLES = [
 ]
 
 // ── Entry screen — empty + active states ─────────────────────────────────────
-function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToScenarios }) {
+function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDelete, goToScenarios }) {
   const upcoming = rehearsals.filter((r) => r.status !== 'done')
   const past     = rehearsals.filter((r) => r.status === 'done')
 
@@ -4518,7 +4518,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToSc
         <>
           <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, marginBottom: 12 }}>Coming up</p>
           {upcoming.map((r) => (
-            <RehearseCard key={r.id} r={r} onRehearse={onRehearse} onReflect={onReflect} />
+            <RehearseCard key={r.id} r={r} onRehearse={onRehearse} onReflect={onReflect} onDelete={onDelete} />
           ))}
         </>
       )}
@@ -4527,7 +4527,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToSc
         <>
           <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.blueDeep, margin: '28px 0 12px' }}>Past conversations</p>
           {past.map((r) => (
-            <RehearseCard key={r.id} r={r} onRehearse={onRehearse} onReflect={onReflect} done />
+            <RehearseCard key={r.id} r={r} onRehearse={onRehearse} onReflect={onReflect} onDelete={onDelete} done />
           ))}
         </>
       )}
@@ -4539,9 +4539,22 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToSc
   )
 }
 
-function RehearseCard({ r, onRehearse, onReflect, done }) {
+function RehearseCard({ r, onRehearse, onReflect, onDelete, done }) {
   const diffLabel = (REHEARSE_DIFF.find((d) => d.id === r.difficulty) || {}).label || 'Realistic'
   const practiced = r.practiceCount || 0
+  const [confirmDel, setConfirmDel] = useState(false)
+
+  const DeleteControl = () => (
+    confirmDel ? (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft }}>Delete?</span>
+        <button onClick={() => onDelete?.(r)} style={{ background: 'none', border: 'none', color: C.coral, fontFamily: SANS, fontSize: 12, fontWeight: 700, padding: 0 }}>Yes</button>
+        <button onClick={() => setConfirmDel(false)} style={{ background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 12, fontWeight: 700, padding: 0 }}>Cancel</button>
+      </span>
+    ) : (
+      <button onClick={() => setConfirmDel(true)} title="Delete this rehearsal" style={{ background: 'none', border: 'none', color: C.inkFaint, fontFamily: SANS, fontSize: 12, fontWeight: 600, padding: 0 }}>Delete</button>
+    )
+  )
 
   if (done) {
     return (
@@ -4558,9 +4571,12 @@ function RehearseCard({ r, onRehearse, onReflect, done }) {
             "{r.realOutcome.length > 90 ? r.realOutcome.slice(0, 90) + '…' : r.realOutcome}"
           </p>
         )}
-        <button onClick={() => onReflect(r)} style={{ background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 13, fontWeight: 600, padding: 0 }}>
-          View reflection →
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button onClick={() => onReflect(r)} style={{ background: 'none', border: 'none', color: C.inkSoft, fontFamily: SANS, fontSize: 13, fontWeight: 600, padding: 0 }}>
+            View reflection →
+          </button>
+          <DeleteControl />
+        </div>
       </div>
     )
   }
@@ -4570,7 +4586,10 @@ function RehearseCard({ r, onRehearse, onReflect, done }) {
       background: C.surface, border: `1px solid ${C.border}`, borderLeft: `4px solid ${C.coral}`,
       borderRadius: 16, padding: '20px', marginBottom: 12,
     }}>
-      <p style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600, color: C.ink, marginBottom: 4 }}>{r.title}</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+        <p style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600, color: C.ink, marginBottom: 4, flex: 1 }}>{r.title}</p>
+        <span style={{ flexShrink: 0, marginTop: 4 }}><DeleteControl /></span>
+      </div>
       <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint, marginBottom: 12 }}>
         {r.createdAt ? `Created ${relativeTime(r.createdAt)}` : ''}
         {practiced > 0 ? `  ·  Practiced ${practiced} time${practiced === 1 ? '' : 's'}` : ''}
@@ -5436,6 +5455,7 @@ export default function App() {
             onNew={startNewRehearsal}
             onRehearse={rehearseExisting}
             onReflect={(r) => { setActiveRehearsal(r); setScreen('rehearse-reflect') }}
+            onDelete={(r) => { deleteRehearsal(r.id); refreshRehearsals() }}
             goToScenarios={() => goTab('scenarios')}
           />
         )
