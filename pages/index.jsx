@@ -4058,10 +4058,10 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
                 transition: 'all .15s',
               }}
             >
-              <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: selected ? '#fff' : C.inkSoft, textAlign: 'center', lineHeight: 1.2 }}>
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: selected ? '#fff' : C.ink, textAlign: 'center', lineHeight: 1.2 }}>
                 {opt.label}
               </span>
-              <span style={{ fontFamily: SANS, fontSize: 10, color: selected ? 'rgba(255,255,255,0.65)' : C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
+              <span style={{ fontFamily: SANS, fontSize: 10, color: selected ? 'rgba(255,255,255,0.65)' : C.inkSoft, textAlign: 'center', lineHeight: 1.3 }}>
                 {opt.desc}
               </span>
             </button>
