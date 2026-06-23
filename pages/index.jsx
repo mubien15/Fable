@@ -4426,6 +4426,16 @@ const REHEARSE_DIFF = [
   { id: 'worstcase', label: 'Worst case', desc: 'Everything goes wrong — are you ready?' },
 ]
 
+// Optional behaviour hint for the Rehearse counterpart (Step 2). `prompt` is
+// fed to the scenario generator so the AI plays the person true to type.
+const REHEARSE_PERSONA_STYLES = [
+  { id: 'collaborative', label: 'Collaborative', prompt: 'They are open and collaborative — they listen first, engage in good faith, and look for a workable outcome. Resistance is gentle and reasonable.' },
+  { id: 'challenging',   label: 'Challenging',   prompt: 'They are challenging and direct — they question the user’s logic head-on, demand evidence, and only concede to a strong, well-reasoned case.' },
+  { id: 'evasive',       label: 'Evasive',       prompt: 'They are evasive — they avoid the core issue, change the subject, minimise the problem, and must be calmly brought back to the point.' },
+  { id: 'timepressured', label: 'Time-pressured',prompt: 'They are time-pressured and impatient — they want the bottom line fast, have little patience for preamble, and reward a concise, concrete ask.' },
+  { id: 'emotional',     label: 'Emotional',     prompt: 'They react emotionally — they may get defensive, frustrated, or take things personally, and need to feel heard before they engage with substance.' },
+]
+
 // ── Entry screen — empty + active states ─────────────────────────────────────
 function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, goToScenarios }) {
   const upcoming = rehearsals.filter((r) => r.status !== 'done')
@@ -4595,6 +4605,7 @@ function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
   const [step, setStep]               = useState(1)
   const [situation, setSituation]     = useState(initialSituation)
   const [persona, setPersona]         = useState('')
+  const [personaStyle, setPersonaStyle] = useState('')   // optional behaviour hint
   const [worry, setWorry]             = useState('')
   const [successLooks, setSuccess]    = useState('')
   const [difficulty, setDifficulty]   = useState('realistic')
@@ -4618,7 +4629,7 @@ function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
       title: 'New rehearsal',
       createdAt: new Date().toISOString(),
       status: 'upcoming',
-      situation, persona, worry, successLooks,
+      situation, persona, personaStyle, worry, successLooks,
       difficulty,
       practiceCount: 0,
       lastPracticed: null,
@@ -4629,10 +4640,11 @@ function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
       generatedScenario: null,
     }
     try {
+      const styleHint = REHEARSE_PERSONA_STYLES.find((p) => p.id === personaStyle)?.prompt || ''
       const res = await fetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'generate-scenario', rehearsal }),
+        body: JSON.stringify({ mode: 'generate-scenario', rehearsal: { ...rehearsal, personaStylePrompt: styleHint } }),
       })
       if (!res.ok) throw new Error('generate failed')
       const data = await res.json()
@@ -4723,6 +4735,34 @@ function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
 
       {cur.note && (
         <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.inkSoft, lineHeight: 1.55, marginTop: 14 }}>{cur.note}</p>
+      )}
+
+      {/* Optional persona-behaviour hint — only on the "who are you talking to" step */}
+      {cur.n === 2 && (
+        <div style={{ marginTop: 22 }}>
+          <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: C.inkSoft, marginBottom: 10 }}>
+            How do they usually behave? <span style={{ textTransform: 'none', letterSpacing: 0, color: C.inkFaint, fontWeight: 600 }}>· optional</span>
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {REHEARSE_PERSONA_STYLES.map((p) => {
+              const sel = personaStyle === p.id
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setPersonaStyle(sel ? '' : p.id)}
+                  style={{
+                    fontFamily: SANS, fontSize: 13, fontWeight: 600,
+                    padding: '8px 14px', borderRadius: 20,
+                    border: `1.5px solid ${sel ? C.coral : C.border}`,
+                    background: sel ? C.coralBg : C.surface,
+                    color: sel ? C.coral : C.inkMid,
+                    transition: 'all .15s',
+                  }}
+                >{p.label}</button>
+              )
+            })}
+          </div>
+        </div>
       )}
 
       {cur.last && (

@@ -97,7 +97,7 @@ Their situation:
 
 The person they're talking to:
 "${r.persona || ''}"
-
+${r.personaStylePrompt ? `\nHow this person typically behaves: ${r.personaStylePrompt}\nReflect this behaviour in the counterpart_instructions and opening_line.\n` : ''}
 What they're most worried about:
 "${r.worry || ''}"
 
