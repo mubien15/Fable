@@ -121,6 +121,11 @@ export default function PasswordGate({ children }) {
         <p style={{ fontFamily: SANS, fontSize: 12, color: COLORS.inkSoft, marginTop: 22, lineHeight: 1.5 }}>
           Request access at scenariolab.quest
         </p>
+        <p style={{ fontFamily: SANS, fontSize: 11, color: COLORS.inkSoft, marginTop: 16, lineHeight: 1.5 }}>
+          <a href="/privacy" style={{ color: COLORS.inkSoft, textDecoration: 'none' }}>Privacy Policy</a>
+          {' · '}
+          <a href="/terms" style={{ color: COLORS.inkSoft, textDecoration: 'none' }}>Terms of Service</a>
+        </p>
       </div>
     </div>
   )
