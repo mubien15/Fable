@@ -2884,17 +2884,64 @@ function NextChallengeCard({ hardest, openBriefing, setActiveTrack }) {
   )
 }
 
+function TranscriptModal({ session, label, onClose }) {
+  const msgs = (session?.messages || []).filter(m => m.role === 'user' || m.role === 'other')
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      background: 'rgba(28,43,74,0.55)', backdropFilter: 'blur(4px)',
+      display: 'flex', flexDirection: 'column',
+    }} onClick={onClose}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          marginTop: 'auto', background: C.bg, borderRadius: '20px 20px 0 0',
+          maxHeight: '85dvh', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -8px 40px rgba(28,43,74,0.18)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 14px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div>
+            <p style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: C.inkFaint, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 2 }}>Transcript</p>
+            <p style={{ fontFamily: SERIF, fontSize: 16, fontWeight: 700, color: C.ink }}>{label}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: C.inkSoft, padding: 4, lineHeight: 1 }}>×</button>
+        </div>
+        {/* Messages */}
+        <div style={{ overflowY: 'auto', padding: '16px 20px 32px', flex: 1 }}>
+          {msgs.length === 0 ? (
+            <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkFaint, textAlign: 'center', paddingTop: 24 }}>No transcript saved for this session.</p>
+          ) : msgs.map((m, i) => {
+            const isUser = m.role === 'user'
+            return (
+              <div key={i} style={{ display: 'flex', flexDirection: isUser ? 'row-reverse' : 'row', gap: 8, marginBottom: 12, alignItems: 'flex-end' }}>
+                <div style={{
+                  maxWidth: '80%', padding: '10px 14px', borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                  background: isUser ? C.navy : C.surface,
+                  border: isUser ? 'none' : `1px solid ${C.border}`,
+                }}>
+                  <p style={{ fontFamily: SANS, fontSize: 14, color: isUser ? '#fff' : C.ink, lineHeight: 1.55, margin: 0 }}>{m.content}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
   const cdObj   = completedData || {}
   const ordered = [...sessions].filter(s => s.completed).sort((a, b) => b.id - a.id).slice(0, 20)
+  const [viewing, setViewing] = useState(null) // { session, label }
   if (ordered.length === 0) return null
   return (
     <div>
+      {viewing && <TranscriptModal session={viewing.session} label={viewing.label} onClose={() => setViewing(null)} />}
       {ordered.map(s => {
         const match     = findTrackScenario(s.scenario)
-        // Rehearsals aren't track scenarios — resolve their title from the
-        // stored session title, or by matching the rehearsal id, before
-        // falling back to anything cryptic.
         const rehearsal = (s.rehearsalId || (typeof s.scenario === 'string' && s.scenario.startsWith('r_')))
           ? rehearsals.find(r => r.id === (s.rehearsalId || s.scenario))
           : null
@@ -2911,6 +2958,7 @@ function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
           || (s.isDailyRep ? `Day ${s.dailyRepDay} · Daily Rep` : 'Rehearsal')
         const rating = cdObj[s.scenario]?.debrief?.overall_rating
         const d      = new Date(s.id)
+        const hasTranscript = (s.messages || []).some(m => m.role === 'user' || m.role === 'other')
         return (
           <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
             <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{icon}</span>
@@ -2922,13 +2970,23 @@ function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
                 {!s.isDailyRep && (rehearsal || s.rehearsalId) && ' · Rehearsal'}
               </p>
             </div>
-            {rating && (
-              <div style={{ display: 'flex', gap: 1, flexShrink: 0 }}>
-                {[1, 2, 3, 4, 5].map(n => (
-                  <span key={n} style={{ fontSize: 11, color: n <= rating ? C.coral : C.border }}>★</span>
-                ))}
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              {rating && (
+                <div style={{ display: 'flex', gap: 1 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <span key={n} style={{ fontSize: 11, color: n <= rating ? C.coral : C.border }}>★</span>
+                  ))}
+                </div>
+              )}
+              {hasTranscript && (
+                <button
+                  onClick={() => setViewing({ session: s, label })}
+                  style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '3px 8px', fontFamily: SANS, fontSize: 11, color: C.inkSoft, cursor: 'pointer' }}
+                >
+                  View
+                </button>
+              )}
+            </div>
           </div>
         )
       })}
@@ -4807,6 +4865,14 @@ function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
       <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkMid, lineHeight: 1.6, marginBottom: 20 }}>{cur.help}</p>
 
       <VoiceTextarea value={cur.value} onChange={cur.set} placeholder={cur.placeholder} minHeight={150} />
+
+      {cur.n === 1 && (
+        <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint, lineHeight: 1.5, marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 12 }}>🔒</span>
+          Your conversations are processed securely and never used to train AI models.{' '}
+          <a href="/privacy" style={{ color: C.inkFaint, textDecoration: 'underline' }}>Privacy policy</a>
+        </p>
+      )}
 
       {cur.note && (
         <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: C.inkSoft, lineHeight: 1.55, marginTop: 14 }}>{cur.note}</p>
