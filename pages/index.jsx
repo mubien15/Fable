@@ -2966,7 +2966,7 @@ function TranscriptModal({ session, label, onClose }) {
               <div key={i} style={{ display: 'flex', flexDirection: isUser ? 'row-reverse' : 'row', gap: 8, marginBottom: 12, alignItems: 'flex-end' }}>
                 <div style={{
                   maxWidth: '80%', padding: '10px 14px', borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  background: isUser ? C.navy : C.surface,
+                  background: isUser ? C.blueDeep : C.surface,
                   border: isUser ? 'none' : `1px solid ${C.border}`,
                 }}>
                   <p style={{ fontFamily: SANS, fontSize: 14, color: isUser ? '#fff' : C.ink, lineHeight: 1.55, margin: 0 }}>{m.content}</p>
@@ -4158,13 +4158,13 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
               onClick={() => setArchetypeSeed(opt.seed)}
               style={{
                 flex: '1 1 calc(33% - 6px)', minWidth: 0, padding: '10px 6px', borderRadius: 12,
-                border: `1.5px solid ${selected ? C.navy : C.border}`,
+                border: `1.5px solid ${selected ? C.blueDeep : C.border}`,
                 background: selected ? 'rgba(28,43,74,0.07)' : C.surface,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 transition: 'all .15s',
               }}
             >
-              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: selected ? C.navy : C.inkSoft, textAlign: 'center', lineHeight: 1.2 }}>
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: selected ? C.blueDeep : C.inkSoft, textAlign: 'center', lineHeight: 1.2 }}>
                 {opt.label}
               </span>
               <span style={{ fontFamily: SANS, fontSize: 10, color: C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
