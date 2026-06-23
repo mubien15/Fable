@@ -2250,11 +2250,14 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         </button>
         <button
           onClick={() => handleEnd()}
+          title="End the conversation and get your feedback"
           style={{
-            background: C.teal, color: '#fff', border: 'none', borderRadius: 10,
+            background: turn >= 4 ? C.teal : 'transparent',
+            color: turn >= 4 ? '#fff' : C.teal,
+            border: `1.5px solid ${C.teal}`, borderRadius: 10,
             padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: SANS, flexShrink: 0,
           }}
-        >End ✓</button>
+        >End &amp; debrief</button>
       </div>
 
       {/* Messages */}
@@ -2313,6 +2316,18 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
               onClick={() => { setSendError(false); send() }}
               style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 12, fontWeight: 700, color: '#B91C1C', flexShrink: 0, paddingLeft: 10 }}
             >↺ Retry</button>
+          </div>
+        )}
+        {/* Ready-for-feedback nudge — appears once the conversation has depth */}
+        {!done && turn >= 4 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 16px', background: C.tealBg, borderBottom: `1px solid #A7F3D0` }}>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.teal, fontWeight: 600, lineHeight: 1.4 }}>
+              Said what you came to say? Wrap up for your feedback.
+            </p>
+            <button
+              onClick={() => handleEnd()}
+              style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: 20, padding: '6px 14px', fontFamily: SANS, fontSize: 12, fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}
+            >End &amp; get feedback →</button>
           </div>
         )}
         {!done && (
@@ -3151,6 +3166,27 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
       {/* ── Session log ───────────────────────────────────────────────────── */}
       <SL>All Sessions</SL>
       <ProgressSessionLog sessions={sessions} completedData={completedData} rehearsals={rehearsals} />
+
+      {/* ── Feedback ──────────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
+        <p style={{ fontFamily: SERIF, fontSize: 15, color: C.ink, marginBottom: 6 }}>
+          Help shape Fable
+        </p>
+        <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkSoft, lineHeight: 1.55, marginBottom: 14 }}>
+          Something feel off, or have an idea? It goes straight to the founder.
+        </p>
+        <a
+          href="mailto:mubien.ahsan@gmail.com?subject=Fable%20feedback&body=What%27s%20on%20your%20mind%3F%0A%0A"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 24,
+            padding: '11px 22px', textDecoration: 'none',
+            fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.blue,
+          }}
+        >
+          <LineIcon id="chat" color={C.blue} size={16} /> Share feedback
+        </a>
+      </div>
     </div>
   )
 }
