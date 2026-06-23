@@ -4039,11 +4039,11 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
         ))}
       </div>
 
-      {/* Persona picker */}
-      <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+      {/* Persona picker — hidden for Rehearse scenarios (persona already set in build step) */}
+      {!scenario._rehearsalId && <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
         Who are you talking to?
-      </p>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap' }}>
+      </p>}
+      {!scenario._rehearsalId && <div style={{ display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap' }}>
         {ARCHETYPE_PICKER.map((opt) => {
           const selected = archetypeSeed === opt.seed
           return (
