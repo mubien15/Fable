@@ -3915,8 +3915,18 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
 // ═══════════════════════════════════════════════
 // SCENARIO BRIEFING SCREEN
 // ═══════════════════════════════════════════════
+const ARCHETYPE_PICKER = [
+  { seed: null,  label: 'Surprise me',    desc: 'Random each time' },
+  { seed: 0,     label: 'Challenger',     desc: 'Pushes back on logic' },
+  { seed: 1,     label: 'Deflector',      desc: 'Hard to pin down' },
+  { seed: 2,     label: 'Diplomat',       desc: 'Warm but slow to commit' },
+  { seed: 3,     label: 'Pragmatist',     desc: 'Wants the bottom line' },
+  { seed: 4,     label: 'Skeptic',        desc: 'Quietly unconvinced' },
+]
+
 function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStart, onBack }) {
   const [difficulty, setDifficulty] = useState(initialDifficulty || scenario?.difficulty_default || 'medium')
+  const [archetypeSeed, setArchetypeSeed] = useState(null) // null = random
   // Default voice on; remembers last choice across sessions
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
     const prefs = lsGet(LS.prefs, {})
@@ -4029,6 +4039,36 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
         ))}
       </div>
 
+      {/* Persona picker */}
+      <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Who are you talking to?
+      </p>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap' }}>
+        {ARCHETYPE_PICKER.map((opt) => {
+          const selected = archetypeSeed === opt.seed
+          return (
+            <button
+              key={String(opt.seed)}
+              onClick={() => setArchetypeSeed(opt.seed)}
+              style={{
+                flex: '1 1 calc(33% - 6px)', minWidth: 0, padding: '10px 6px', borderRadius: 12,
+                border: `1.5px solid ${selected ? C.navy : C.border}`,
+                background: selected ? C.navy : C.surface,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                transition: 'all .15s',
+              }}
+            >
+              <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: selected ? '#fff' : C.inkSoft, textAlign: 'center', lineHeight: 1.2 }}>
+                {opt.label}
+              </span>
+              <span style={{ fontFamily: SANS, fontSize: 10, color: selected ? 'rgba(255,255,255,0.65)' : C.inkFaint, textAlign: 'center', lineHeight: 1.3 }}>
+                {opt.desc}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Practice mode picker */}
       <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
         How do you want to practice?
@@ -4060,7 +4100,7 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
         ))}
       </div>
 
-      <Btn onClick={() => onStart(scenario, difficulty, voiceEnabled)}>Start Simulation →</Btn>
+      <Btn onClick={() => onStart(scenario, difficulty, voiceEnabled, archetypeSeed)}>Start Simulation →</Btn>
     </div>
   )
 }
@@ -5054,7 +5094,7 @@ export default function App() {
 
   // Start a structured scenario (from a track)
   // Also handles user-choice Daily Rep days — checks pendingDailyRepDay
-  const startScenario = (scenarioData, difficulty, voiceEnabled = true) => {
+  const startScenario = (scenarioData, difficulty, voiceEnabled = true, chosenArchetypeSeed = null) => {
     const isForDailyRep = !!pendingDailyRepDay
     setCurrentSession({
       scenario: scenarioData.id,
@@ -5067,8 +5107,8 @@ export default function App() {
       isDailyRep: isForDailyRep,
       dailyRepDay: isForDailyRep ? pendingDailyRepDay.day : undefined,
       rehearsalId: scenarioData._rehearsalId || null,
-      // Rotating counterpart personality — stays fixed for the whole session.
-      archetypeSeed: Math.floor(Math.random() * 5),
+      // Use user-chosen archetype if set, otherwise randomize.
+      archetypeSeed: chosenArchetypeSeed !== null ? chosenArchetypeSeed : Math.floor(Math.random() * 5),
       voiceEnabled,
     })
     if (isForDailyRep) setPendingDailyRepDay(null)
@@ -5444,7 +5484,7 @@ export default function App() {
           <ScenarioBriefingScreen
             scenario={activeBriefingScenario}
             initialDifficulty={pendingBriefingDifficulty}
-            onStart={(scenario, difficulty, voiceEnabled) => startScenario(scenario, difficulty, voiceEnabled)}
+            onStart={(scenario, difficulty, voiceEnabled, seed) => startScenario(scenario, difficulty, voiceEnabled, seed)}
             onBack={() => { setScreen(briefingBackTarget); if (briefingBackTarget === 'rehearse') setActiveTab('rehearse') }}
           />
         )
