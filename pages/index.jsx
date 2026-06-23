@@ -79,6 +79,11 @@ const MISSIONS = [
 
 // ─── Filler-word KPIs ────────────────────────────────────────────────────────
 // Deterministic counts from the user's own transcript (voice → Whisper text,
+// Counterpart archetype names — MUST stay in the same order as
+// COUNTERPART_ARCHETYPES in lib/coachPrompt.js. Used only to display which
+// personality the AI played, so archetype rotation is visible in the debrief.
+const COUNTERPART_ARCHETYPE_NAMES = ['The Challenger', 'The Deflector', 'The Diplomat', 'The Pragmatist', 'The Skeptic']
+
 // or typed). Powers the "Delivery" numbers in the debrief and Progress tab.
 // "like" only counts in its discourse-marker position (next to a comma) so
 // legitimate uses ("I'd like to…") aren't flagged.
@@ -4141,6 +4146,17 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
       <h1 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 700, color: C.ink, marginBottom: 4, lineHeight: 1.25 }}>
         {scenario?.title || 'Debrief'}
       </h1>
+
+      {/* Which counterpart personality the AI played (track/daily scenarios only) */}
+      {!rehearsal && session?.archetypeSeed != null && COUNTERPART_ARCHETYPE_NAMES[session.archetypeSeed % COUNTERPART_ARCHETYPE_NAMES.length] && (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+          fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.blue,
+          background: C.blueBg, padding: '4px 11px', borderRadius: 20, letterSpacing: '.03em',
+        }}>
+          Counterpart: {COUNTERPART_ARCHETYPE_NAMES[session.archetypeSeed % COUNTERPART_ARCHETYPE_NAMES.length]}
+        </span>
+      )}
 
       {loading ? (
         <div style={{ padding: '48px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
