@@ -4125,7 +4125,7 @@ function ScenarioBriefingScreen({ scenario, initialDifficulty = 'medium', onStar
             </button>
           )
         })}
-      </div>
+      </div>}
 
       {/* Practice mode picker */}
       <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 8 }}>
