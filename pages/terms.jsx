@@ -114,7 +114,7 @@ export default function TermsPage() {
 
           <h2 style={s.h2}>Governing law</h2>
           <p style={s.p}>
-            These terms are governed by the laws of the Netherlands. Any disputes will be resolved in the courts of the Netherlands.
+            These terms are governed by the laws of Canada. Any disputes will be resolved in the courts of Canada.
           </p>
 
           <h2 style={s.h2}>Contact</h2>
