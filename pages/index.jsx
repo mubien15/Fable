@@ -2094,6 +2094,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           sessionHistory: history.slice(0, -1),
           difficulty: session?.difficulty || 'medium',
           userRole: session?.userRole || 'all',
+          archetypeSeed: session?.archetypeSeed ?? null,
         }),
       })
       const data = await res.json()
@@ -4955,6 +4956,8 @@ export default function App() {
       isDailyRep: isForDailyRep,
       dailyRepDay: isForDailyRep ? pendingDailyRepDay.day : undefined,
       rehearsalId: scenarioData._rehearsalId || null,
+      // Rotating counterpart personality — stays fixed for the whole session.
+      archetypeSeed: Math.floor(Math.random() * 5),
       voiceEnabled,
     })
     if (isForDailyRep) setPendingDailyRepDay(null)
@@ -5107,6 +5110,7 @@ export default function App() {
       userRole: user?.role || 'all',
       isDailyRep: true,
       dailyRepDay: dayNumber,
+      archetypeSeed: Math.floor(Math.random() * 5),
     })
     setScreen('simulation')
   }

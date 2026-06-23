@@ -164,10 +164,11 @@ Make it feel written specifically for this person's situation. Do not be generic
       }))
       history.push({ role: 'user', content: userMessage })
 
+      const { archetypeSeed = null } = req.body
       const response = await client.messages.create({
         model: 'claude-sonnet-4-5',
         max_tokens: 256,  // counterpart replies are 1-2 sentences; lower ceiling = faster
-        system: buildScenarioPrompt(scenario, difficulty, userRole),
+        system: buildScenarioPrompt(scenario, difficulty, userRole, archetypeSeed),
         messages: history,
       })
 
@@ -241,6 +242,7 @@ Your job is to give feedback that is:
 - HONEST: do not inflate scores or soften observations to be kind
 - ACTIONABLE: every piece of feedback includes something they can do differently
 - PROFESSIONAL: speak as a respected senior mentor, not a motivational coach
+- ADAPTIVE: judge effectiveness against THIS counterpart as they behaved in the transcript, not a single universal style. Directness and brevity suit an impatient or evidence-driven counterpart; a relationship-first or diplomatic counterpart may need warmth, rapport, and patience first. Reward the practitioner for reading the room and matching their approach to the person in front of them — do not penalise tact when tact was the right call, or bluntness when bluntness landed.
 
 Return ONLY valid JSON in this exact structure — no extra keys, no markdown:
 {
