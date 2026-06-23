@@ -1224,7 +1224,8 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
         }),
       })
       const data = await res.json()
-      setMessages((prev) => [...prev, { role: 'coach', content: data.reply }])
+      const reply = (data.reply || '').trim() || "I'm here. Take your time — what's on your mind?"
+      setMessages((prev) => [...prev, { role: 'coach', content: reply }])
     } catch {
       setMessages((prev) => [...prev, { role: 'coach', content: "I'm here. Take your time." }])
     } finally {
@@ -1758,6 +1759,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   )
   const [listening, setListening] = useState(false)
   const [sendError, setSendError] = useState(false)  // true = last API call failed, show retry
+  const [confirmExit, setConfirmExit] = useState(false)  // guard against losing an in-progress session
   // ── Voice mode ──────────────────────────────────────────────────────────────
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -2040,16 +2042,27 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const DEBRIEF_TRIGGERS = ['feedback', 'done', 'end session', "that's enough", 'finish', 'wrap up', 'debrief']
   const wantsDebrief = (msg) => DEBRIEF_TRIGGERS.some((t) => msg.toLowerCase().includes(t))
 
-  const send = async (override) => {
+  const send = async (override, opts = {}) => {
     unlockAudio()  // satisfy iOS gesture requirement — must be called synchronously on tap
-    const text = (typeof override === 'string' ? override : input).trim()
+    // Retry: the failed user message is still in `messages` (and the input was
+    // already cleared), so resend its text without appending a duplicate.
+    const isRetry = opts.retry === true
+    const lastUser = isRetry ? [...messages].reverse().find((m) => m.role === 'user') : null
+    const text = isRetry
+      ? (lastUser?.content || '').trim()
+      : (typeof override === 'string' ? override : input).trim()
     if (!text || loading || done) return
     setSendError(false)
 
-    const userMsg = { role: 'user', content: text }
-    const next = [...messages, userMsg]
-    setMessages(next)
-    setInput('')
+    let next
+    if (isRetry) {
+      next = messages  // user message already present; don't append again
+    } else {
+      const userMsg = { role: 'user', content: text }
+      next = [...messages, userMsg]
+      setMessages(next)
+      setInput('')
+    }
     setLoading(true)
     scrollDown()
 
@@ -2205,8 +2218,40 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   const scenarioTitle = session?.scenarioData?.title || 'Role-play'
   const diffMeta = DIFFICULTY_META[session?.difficulty || 'medium'] || DIFFICULTY_META.medium
 
+  const discardAndExit = () => {
+    setConfirmExit(false)
+    onSaveMessages?.(messages)
+    setScreen(session?.rehearsalId ? 'rehearse' : session?.scenarioData ? 'track-scenarios' : 'feedback')
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: C.bg }}>
+      {/* Leave-conversation confirm — protects an in-progress session */}
+      {confirmExit && (
+        <div
+          onClick={() => setConfirmExit(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(28,43,74,0.55)', backdropFilter: 'blur(4px)', display: 'flex', flexDirection: 'column' }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ marginTop: 'auto', background: C.surface, borderRadius: '20px 20px 0 0', padding: '24px 20px calc(24px + env(safe-area-inset-bottom, 0px))', boxShadow: '0 -8px 40px rgba(28,43,74,0.18)' }}>
+            <p style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 6 }}>Leave this conversation?</p>
+            <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkSoft, lineHeight: 1.5, marginBottom: 20 }}>
+              End now to get your feedback, or keep practicing. Leaving without ending discards this session.
+            </p>
+            <button
+              onClick={() => { setConfirmExit(false); handleEnd() }}
+              style={{ width: '100%', background: C.teal, color: '#fff', border: 'none', borderRadius: 12, padding: '13px', fontFamily: SANS, fontSize: 14, fontWeight: 700, marginBottom: 10 }}
+            >End &amp; get feedback →</button>
+            <button
+              onClick={() => setConfirmExit(false)}
+              style={{ width: '100%', background: 'transparent', color: C.ink, border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '13px', fontFamily: SANS, fontSize: 14, fontWeight: 600, marginBottom: 10 }}
+            >Keep practicing</button>
+            <button
+              onClick={discardAndExit}
+              style={{ width: '100%', background: 'none', border: 'none', color: C.inkFaint, fontFamily: SANS, fontSize: 13, fontWeight: 600 }}
+            >Discard &amp; leave</button>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div style={{
         padding: '10px 16px', borderBottom: `1px solid ${C.border}`,
@@ -2215,6 +2260,9 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
       }}>
         <button
           onClick={() => {
+            // If there's been a real exchange, don't silently discard it.
+            const hasRealConversation = !done && messages.some((m) => m.role === 'user')
+            if (hasRealConversation) { setConfirmExit(true); return }
             onSaveMessages?.(messages)
             setScreen(session?.rehearsalId ? 'rehearse' : session?.scenarioData ? 'track-scenarios' : 'feedback')
           }}
@@ -2318,7 +2366,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
               The AI took too long to respond — tap to try again.
             </p>
             <button
-              onClick={() => { setSendError(false); send() }}
+              onClick={() => send(undefined, { retry: true })}
               style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 12, fontWeight: 700, color: '#B91C1C', flexShrink: 0, paddingLeft: 10 }}
             >↺ Retry</button>
           </div>
