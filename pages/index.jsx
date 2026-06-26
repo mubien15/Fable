@@ -415,9 +415,9 @@ function VoiceTextarea({ value, onChange, placeholder, minHeight = 140 }) {
 
 // Cohesive line-icon set for the bottom nav. All stroke = currentColor so they
 // tint coral when active / faint when inactive, exactly like the old glyphs did.
-function NavIcon({ id, color }) {
+function NavIcon({ id, color, size = 23 }) {
   const common = {
-    width: 23, height: 23, viewBox: '0 0 24 24', fill: 'none',
+    width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
     stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round',
   }
   switch (id) {
@@ -600,35 +600,36 @@ function BottomNav({ active, onChange }) {
       position: 'fixed', left: '50%', transform: 'translateX(-50%)',
       bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
       width: 'calc(100% - 24px)', maxWidth: 400,
-      background: 'rgba(28,43,74,0.86)',
-      backdropFilter: 'blur(20px) saturate(1.6)',
-      WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
-      border: '1px solid rgba(255,255,255,0.14)',
-      borderRadius: 32,
-      boxShadow: '0 12px 36px rgba(28,43,74,0.38), inset 0 1px 0 rgba(255,255,255,0.16)',
+      background: 'rgba(44,61,99,0.58)',
+      backdropFilter: 'blur(24px) saturate(1.8)',
+      WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
+      border: '1px solid rgba(255,255,255,0.18)',
+      borderRadius: 30,
+      boxShadow: '0 10px 30px rgba(28,43,74,0.24), inset 0 1px 0 rgba(255,255,255,0.20)',
       display: 'flex', zIndex: 200,
-      padding: '8px 8px',
+      padding: '6px 7px',
     }}>
       {tabs.map((t) => {
         const isActive = active === t.id
-        const color = isActive ? '#FFB4A3' : 'rgba(255,255,255,0.6)'
+        const color = isActive ? '#FFB4A3' : 'rgba(255,255,255,0.66)'
         return (
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
             style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              background: isActive ? 'rgba(255,255,255,0.12)' : 'none',
-              border: 'none', padding: '7px 0 6px', borderRadius: 24,
-              boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.18)' : 'none',
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2.5,
+              margin: '0 2px',
+              background: isActive ? 'rgba(255,255,255,0.16)' : 'none',
+              border: 'none', padding: '6px 0', borderRadius: 16,
+              boxShadow: isActive ? 'inset 0 1px 0 rgba(255,255,255,0.22)' : 'none',
               transition: 'background .25s ease',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 23 }}>
-              <NavIcon id={t.id} color={color} />
+            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 21 }}>
+              <NavIcon id={t.id} color={color} size={21} />
             </span>
             <span style={{
-              fontSize: 9.5, fontWeight: 700, letterSpacing: '.05em', fontFamily: SANS, color,
+              fontSize: 8.5, fontWeight: 700, letterSpacing: '.04em', fontFamily: SANS, color,
             }}>
               {t.label.toUpperCase()}
             </span>
