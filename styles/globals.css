@@ -63,3 +63,13 @@ a { color: inherit; text-decoration: none; }
 
 textarea:focus { outline: none; }
 input:focus    { outline: none; }
+
+/* Tactile button press — subtle scale + dim, Apple-style */
+.fable-btn { transition: transform .12s cubic-bezier(.2,.8,.2,1), filter .2s ease, box-shadow .2s ease; will-change: transform; }
+.fable-btn:active { transform: scale(0.97); filter: brightness(0.97); }
+
+/* Card lift on hover (pointer devices only) */
+@media (hover: hover) {
+  .fable-card { transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease; }
+  .fable-card:hover { transform: translateY(-2px); }
+}

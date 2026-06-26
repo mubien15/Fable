@@ -43,6 +43,16 @@ const C = {
 // devices). SERIF is kept as an alias so heading styles keep their weights.
 const SERIF = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 const SANS = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+
+// Elevation system — soft, layered, Apple-style depth (no hard borders)
+const SHADOW = {
+  card:  '0 1px 2px rgba(28,43,74,0.04), 0 10px 26px -14px rgba(28,43,74,0.16)',
+  lift:  '0 2px 6px rgba(28,43,74,0.06), 0 22px 48px -20px rgba(28,43,74,0.26)',
+  coral: '0 6px 18px -5px rgba(232,100,74,0.42)',
+  glass: '0 8px 32px rgba(28,43,74,0.14)',
+}
+// Tabular figures for stat numbers so digits align cleanly
+const STAT_NUM = { fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }
 // Tiny silent WAV used to unlock the audio element on iOS/Safari (user gesture requirement)
 const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
 
@@ -210,17 +220,19 @@ function Btn({ children, onClick, variant = 'primary', disabled, style: s = {} }
   const base = {
     width: '100%', border: 'none', borderRadius: 14, padding: '15px 20px',
     fontSize: 15, fontWeight: 700, fontFamily: SANS, letterSpacing: '.01em',
-    cursor: disabled ? 'default' : 'pointer', transition: 'opacity .15s, transform .1s',
+    cursor: disabled ? 'default' : 'pointer',
     ...s,
   }
   const v = {
-    primary:   { background: disabled ? C.coralDim : C.coral, color: disabled ? '#fff8' : '#fff' },
-    blue:      { background: C.blueDeep, color: '#fff' },
+    primary: disabled
+      ? { background: C.coralDim, color: '#fff8' }
+      : { background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', boxShadow: SHADOW.coral },
+    blue:      { background: 'linear-gradient(180deg, #344B82 0%, #1C2B4A 100%)', color: '#fff', boxShadow: '0 6px 18px -5px rgba(28,43,74,0.45)' },
     secondary: { background: 'transparent', color: C.ink, border: `1.5px solid ${C.border}` },
     ghost:     { background: 'transparent', color: C.inkSoft, padding: '10px 20px', fontSize: 14 },
   }
   return (
-    <button onClick={disabled ? undefined : onClick} style={{ ...base, ...v[variant] }}>
+    <button className={disabled ? undefined : 'fable-btn'} onClick={disabled ? undefined : onClick} style={{ ...base, ...v[variant] }}>
       {children}
     </button>
   )
@@ -228,9 +240,9 @@ function Btn({ children, onClick, variant = 'primary', disabled, style: s = {} }
 
 function Card({ children, bg = C.surface, border = C.border, style: s = {} }) {
   return (
-    <div style={{
-      background: bg, borderRadius: 16, padding: '18px 20px',
-      border: `1px solid ${border}`, ...s,
+    <div className="fable-card" style={{
+      background: bg, borderRadius: 18, padding: '18px 20px',
+      border: `1px solid ${border}`, boxShadow: SHADOW.card, ...s,
     }}>
       {children}
     </div>
@@ -889,11 +901,11 @@ function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onRe
             borderRadius: 16, border: `1px solid ${C.border}`,
             background: TRACK_BG[track.id] || C.surface,
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            boxShadow: '0 1px 3px rgba(0,0,0,.06)',
-            transition: 'transform .15s ease, box-shadow .15s ease',
+            boxShadow: SHADOW.card,
+            transition: 'transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.005)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,.09)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.06)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = SHADOW.lift }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = SHADOW.card }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, flex: 1, minWidth: 0 }}>
             <span style={{ marginTop: 2, flexShrink: 0, display: 'flex' }}><LineIcon id={track.id} color={C.blue} size={24} /></span>
@@ -989,9 +1001,9 @@ function CoachScreen({ sessions, setScreen, onStartMode }) {
   const coachSessions = sessions.filter((s) => s.type === 'coach').slice(-2).reverse()
 
   const ModeCard = ({ icon, title, desc, btnLabel, mode }) => (
-    <div style={{
+    <div className="fable-card" style={{
       background: C.surface, borderRadius: 18, border: `1px solid ${C.border}`,
-      padding: '24px', marginBottom: 14, boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+      padding: '24px', marginBottom: 14, boxShadow: SHADOW.card,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <span style={{
@@ -1076,7 +1088,7 @@ function CoachAreaScreen({ setScreen, onSelectArea }) {
             style={{
               padding: '24px 16px', borderRadius: 16, border: `1.5px solid ${C.border}`,
               background: C.surface, textAlign: 'center',
-              boxShadow: '0 1px 3px rgba(0,0,0,.06)',
+              boxShadow: SHADOW.card,
               transition: 'border-color .15s, background .15s',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.blue; e.currentTarget.style.background = C.blueBg }}
@@ -2864,8 +2876,9 @@ function TrackBreakdown({ trackCounts }) {
 function GrowthChart({ weeklyData, hasRatings }) {
   if (weeklyData.length < 2) {
     return (
-      <div style={{ background: C.surfaceSubtle, borderRadius: 12, padding: '20px', textAlign: 'center', marginBottom: 28 }}>
-        <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, fontStyle: 'italic', lineHeight: 1.6 }}>
+      <div style={{ background: 'rgba(28,43,74,0.025)', border: `1px dashed ${C.border}`, borderRadius: 16, padding: '20px 22px', marginBottom: 28, display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span style={{ flexShrink: 0, opacity: 0.5, display: 'flex' }}><LineIcon id="career" color={C.blueDeep} size={22} /></span>
+        <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 13, lineHeight: 1.55 }}>
           Complete sessions across multiple weeks to see your growth trend here.
         </p>
       </div>
@@ -3122,8 +3135,8 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
       <SL>Your Profile</SL>
       <div style={{
         background: C.surface, border: `1px solid ${C.border}`,
-        borderLeft: `4px solid ${C.coral}`, borderRadius: 16,
-        padding: '20px 22px', marginBottom: 28,
+        borderLeft: `4px solid ${C.coral}`, borderRadius: 18,
+        padding: '20px 22px', marginBottom: 28, boxShadow: SHADOW.card,
       }}>
         <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.coral, textTransform: 'uppercase', marginBottom: 10 }}>
           Communication Profile
@@ -3156,9 +3169,9 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           { val: progress.avgRating ?? '—',  label: 'Avg Rating' },
           { val: progress.streak,             label: 'Day Streak' },
         ].map(s => (
-          <div key={s.label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 10px', textAlign: 'center' }}>
-            <p style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 6 }}>{s.val}</p>
-            <p style={{ fontFamily: SANS, fontSize: 10, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
+          <div key={s.label} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 10px', textAlign: 'center', boxShadow: SHADOW.card }}>
+            <p style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 7, ...STAT_NUM }}>{s.val}</p>
+            <p style={{ fontFamily: SANS, fontSize: 10, fontWeight: 600, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.06em' }}>{s.label}</p>
           </div>
         ))}
       </div>
@@ -3167,22 +3180,22 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
       {progress.fillerPer100 !== null && (
         <>
           <SL>Delivery</SL>
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px', marginBottom: 28 }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '18px', marginBottom: 28, boxShadow: SHADOW.card }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 5 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 5, ...STAT_NUM }}>
                   {progress.fillerPer100.toFixed(1)}
                 </p>
                 <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>Fillers / 100 words</p>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 5 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 5, ...STAT_NUM }}>
                   {progress.fillerWordsTotal}
                 </p>
                 <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>Total fillers</p>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: progress.fillerTrend === 'down' ? C.teal : progress.fillerTrend === 'up' ? C.coral : C.ink, lineHeight: 1, marginBottom: 5 }}>
+                <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: progress.fillerTrend === 'down' ? C.teal : progress.fillerTrend === 'up' ? C.coral : C.ink, lineHeight: 1, marginBottom: 5, ...STAT_NUM }}>
                   {progress.fillerTrend === 'down' ? '▼' : progress.fillerTrend === 'up' ? '▲' : '—'}
                 </p>
                 <p style={{ fontFamily: SANS, fontSize: 9, color: C.inkSoft, textTransform: 'uppercase', letterSpacing: '.05em' }}>Trend</p>
@@ -3223,9 +3236,12 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
       {progress.strengths.length === 0 && progress.develop.length === 0 && (
         <>
           <SL>Your Strengths</SL>
-          <p style={{ fontFamily: SERIF, color: C.inkSoft, fontSize: 14, fontStyle: 'italic', marginBottom: 24, lineHeight: 1.65 }}>
-            Complete a scenario debrief and your strength patterns will appear here.
-          </p>
+          <div style={{ background: 'rgba(28,43,74,0.025)', border: `1px dashed ${C.border}`, borderRadius: 16, padding: '20px 22px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ flexShrink: 0, opacity: 0.5, display: 'flex' }}><LineIcon id="target" color={C.blueDeep} size={22} /></span>
+            <p style={{ fontFamily: SANS, color: C.inkSoft, fontSize: 13, lineHeight: 1.55 }}>
+              Complete a scenario debrief and your strength patterns will appear here.
+            </p>
+          </div>
         </>
       )}
 
@@ -3796,12 +3812,13 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
           onClick={() => { setActiveTrack(track); setScreen('track-scenarios') }}
           style={{
             width: '100%', textAlign: 'left', marginBottom: 14, padding: '20px',
-            borderRadius: 16, border: `1.5px solid ${C.border}`,
+            borderRadius: 18, border: `1px solid ${C.border}`,
             background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
-            transition: 'border-color .15s, box-shadow .15s',
+            boxShadow: SHADOW.card,
+            transition: 'transform .2s cubic-bezier(.2,.8,.2,1), border-color .15s, box-shadow .2s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(232,100,74,.1)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = C.coralDim; e.currentTarget.style.boxShadow = SHADOW.lift }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = SHADOW.card }}
         >
           <div style={{
             width: 48, height: 48, borderRadius: 12, background: C.coralBg,
@@ -3842,12 +3859,13 @@ function ScenariosScreen({ setScreen, setActiveTrack, user }) {
         onClick={() => setScreen('daily-rep')}
         style={{
           width: '100%', textAlign: 'left', padding: '20px',
-          borderRadius: 16, border: `1.5px solid ${C.border}`,
+          borderRadius: 18, border: `1px solid ${C.border}`,
           background: C.surface, display: 'flex', alignItems: 'flex-start', gap: 16,
-          transition: 'border-color .15s, box-shadow .15s',
+          boxShadow: SHADOW.card,
+          transition: 'transform .2s cubic-bezier(.2,.8,.2,1), border-color .15s, box-shadow .2s',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.coral; e.currentTarget.style.boxShadow = '0 2px 12px rgba(232,100,74,.1)' }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = 'none' }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = C.coralDim; e.currentTarget.style.boxShadow = SHADOW.lift }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = SHADOW.card }}
       >
         <div style={{
           width: 48, height: 48, borderRadius: 12,
