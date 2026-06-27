@@ -600,18 +600,18 @@ function BottomNav({ active, onChange }) {
       position: 'fixed', left: '50%', transform: 'translateX(-50%)',
       bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
       width: 'calc(100% - 24px)', maxWidth: 400,
-      background: 'rgba(44,61,99,0.58)',
-      backdropFilter: 'blur(24px) saturate(1.8)',
-      WebkitBackdropFilter: 'blur(24px) saturate(1.8)',
-      border: '1px solid rgba(255,255,255,0.18)',
+      background: 'linear-gradient(180deg, rgba(99,138,224,0.60) 0%, rgba(58,86,164,0.70) 100%)',
+      backdropFilter: 'blur(24px) saturate(2)',
+      WebkitBackdropFilter: 'blur(24px) saturate(2)',
+      border: '1px solid rgba(255,255,255,0.28)',
       borderRadius: 30,
-      boxShadow: '0 10px 30px rgba(28,43,74,0.24), inset 0 1px 0 rgba(255,255,255,0.20)',
+      boxShadow: '0 10px 30px rgba(46,72,140,0.26), inset 0 1px 0 rgba(255,255,255,0.30)',
       display: 'flex', zIndex: 200,
       padding: '6px 7px',
     }}>
       {tabs.map((t) => {
         const isActive = active === t.id
-        const color = isActive ? '#FFB4A3' : 'rgba(255,255,255,0.66)'
+        const color = isActive ? '#FFD2C5' : 'rgba(255,255,255,0.82)'
         return (
           <button
             key={t.id}
