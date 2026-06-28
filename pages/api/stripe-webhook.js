@@ -31,16 +31,19 @@ async function userIdFromCustomer(customerId) {
 }
 
 async function applySubscription(userId, sub, customerId) {
-  const priceId = sub.items?.data?.[0]?.price?.id
+  const item = sub.items?.data?.[0]
+  const priceId = item?.price?.id
   const tier = PRICE_TIER[priceId] || 'free'
   const active = ['active', 'trialing'].includes(sub.status)
+  // Newer Stripe API versions expose current_period_end on the subscription
+  // item rather than the top-level subscription — read either.
+  const periodEnd = sub.current_period_end || item?.current_period_end
   await supabaseAdmin.from('profiles').update({
     tier: active ? tier : 'free',
     subscription_status: sub.status,
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
-    current_period_end: sub.current_period_end
-      ? new Date(sub.current_period_end * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
   }).eq('id', userId)
 }
 
