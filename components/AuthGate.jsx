@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { hydrateFromCloud, clearSyncUser, clearLocalData, pushNow } from '../lib/cloudSync'
 
 // ─── Account gate ─────────────────────────────────────────────────────────
 // Replaces the shared early-access password. Shows sign-up / login until the
@@ -32,6 +33,7 @@ const linkBtn = {
 export default function AuthGate({ children }) {
   const [checked, setChecked] = useState(false)
   const [session, setSession] = useState(null)
+  const [hydrated, setHydrated] = useState(false)   // cloud data pulled into localStorage
   const [mode, setMode] = useState('signin')   // signin | signup | forgot | sent | recovery
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -45,10 +47,36 @@ export default function AuthGate({ children }) {
       setChecked(true)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (event === 'SIGNED_OUT') {
+        clearSyncUser()
+        clearLocalData()       // don't leak data to the next account on this device
+        setHydrated(false)
+        setMode('signin')
+      }
       setSession(sess)
       if (event === 'PASSWORD_RECOVERY') setMode('recovery')
     })
     return () => sub.subscription.unsubscribe()
+  }, [])
+
+  // Pull the user's cloud data into localStorage before rendering the app.
+  useEffect(() => {
+    if (!session || mode === 'recovery') return
+    let cancelled = false
+    setHydrated(false)
+    hydrateFromCloud(session.user.id).finally(() => { if (!cancelled) setHydrated(true) })
+    return () => { cancelled = true }
+  }, [session?.user?.id, mode])
+
+  // Best-effort flush of pending changes when the tab is hidden/closed.
+  useEffect(() => {
+    const flush = () => { if (document.visibilityState === 'hidden') pushNow() }
+    document.addEventListener('visibilitychange', flush)
+    window.addEventListener('pagehide', pushNow)
+    return () => {
+      document.removeEventListener('visibilitychange', flush)
+      window.removeEventListener('pagehide', pushNow)
+    }
   }, [])
 
   const reset = () => { setError(''); setNotice('') }
@@ -100,7 +128,19 @@ export default function AuthGate({ children }) {
   }
 
   if (!checked) return <div style={{ minHeight: '100dvh', background: C.bg }} />
-  if (session && mode !== 'recovery') return children
+  if (session && mode !== 'recovery') {
+    if (!hydrated) {
+      return (
+        <div style={{ minHeight: '100dvh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
+          <h1 style={{ fontFamily: SANS, fontSize: 34, fontWeight: 700, letterSpacing: '-0.01em' }}>
+            <span style={{ color: C.coral }}>F</span><span style={{ color: C.navy }}>.able</span>
+          </h1>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${C.border}`, borderTopColor: C.coral, animation: 'spin 0.7s linear infinite' }} />
+        </div>
+      )
+    }
+    return children
+  }
 
   const titles = {
     signin:   'Welcome back',

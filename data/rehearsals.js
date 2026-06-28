@@ -4,6 +4,8 @@
 // stored locally. The AI-generated scenario is produced server-side via
 // /api/coaching (never expose the API key in the browser).
 
+import { schedulePush } from '../lib/cloudSync'
+
 const LS_KEY = 'fable_rehearsals'
 
 const read = () => {
@@ -12,6 +14,7 @@ const read = () => {
 }
 const write = (list) => {
   try { localStorage.setItem(LS_KEY, JSON.stringify(list)) } catch {}
+  schedulePush()  // mirror rehearsal changes up to the user's cloud document
 }
 
 // Generate a reasonably-unique id without a uuid dependency.

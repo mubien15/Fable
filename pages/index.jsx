@@ -6,6 +6,8 @@ import {
   getRehearsals, saveRehearsal, updateRehearsal, deleteRehearsal,
   newRehearsalId, rehearseDifficultyToSystem, relativeTime,
 } from '../data/rehearsals'
+import { schedulePush, pushNow } from '../lib/cloudSync'
+import { supabase } from '../lib/supabaseClient'
 
 // ═══════════════════════════════════════════════
 // FEATURE FLAGS
@@ -177,6 +179,7 @@ function lsGet(key, fallback) {
 }
 function lsSet(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
+  schedulePush()  // mirror the change up to the user's cloud document
 }
 
 // ═══════════════════════════════════════════════
@@ -3119,6 +3122,14 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           The picture gets clearer the more you practice.
         </p>
         <Btn onClick={() => { setScreen('daily-rep') }}>Start your first rep →</Btn>
+        <div style={{ marginTop: 28 }}>
+          <button
+            onClick={async () => { await pushNow(); await supabase.auth.signOut() }}
+            style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkSoft, padding: 8 }}
+          >
+            Log out
+          </button>
+        </div>
       </div>
     )
   }
@@ -3314,6 +3325,16 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
         >
           <LineIcon id="chat" color={C.blue} size={16} /> Share feedback
         </a>
+      </div>
+
+      {/* ── Account ───────────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 28, textAlign: 'center' }}>
+        <button
+          onClick={async () => { await pushNow(); await supabase.auth.signOut() }}
+          style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkSoft, padding: 8 }}
+        >
+          Log out
+        </button>
       </div>
     </div>
   )
