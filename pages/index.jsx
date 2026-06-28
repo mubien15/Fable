@@ -3062,7 +3062,7 @@ function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
 // ═══════════════════════════════════════════════
 // PROGRESS SCREEN — MAIN DASHBOARD
 // ═══════════════════════════════════════════════
-function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack, rehearsals = [], user }) {
+function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack, rehearsals = [], user, onManageSubscription }) {
   const progress = useProgressData(sessions, dailyRep, completedData)
   const rehearseStats = {
     created:   rehearsals.length,
@@ -3344,6 +3344,19 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
 
       {/* ── Account ───────────────────────────────────────────────────────── */}
       <div style={{ marginTop: 28, textAlign: 'center' }}>
+        {TIER_GATING_ENABLED && user?.tier && user.tier !== 'free' && (
+          <div style={{ marginBottom: 14 }}>
+            <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, marginBottom: 8 }}>
+              You’re on the <strong style={{ color: C.ink, textTransform: 'capitalize' }}>{user.tier}</strong> plan.
+            </p>
+            <button
+              onClick={onManageSubscription}
+              style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 24, padding: '10px 20px', fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.blue, boxShadow: SHADOW.card }}
+            >
+              Manage subscription
+            </button>
+          </div>
+        )}
         <button
           onClick={async () => { await pushNow(); await supabase.auth.signOut() }}
           style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkSoft, padding: 8 }}
@@ -5306,6 +5319,23 @@ export default function App() {
     }
   }, [])
 
+  // Open the Stripe billing portal so the user can update or cancel their plan.
+  const startPortal = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else alert(data.error || 'Could not open subscription management — please try again.')
+    } catch {
+      alert('Could not open subscription management — please try again.')
+    }
+  }, [])
+
   // Load from localStorage on mount
   useEffect(() => {
     const savedUser          = lsGet(LS.user, null)
@@ -5322,23 +5352,24 @@ export default function App() {
     setCompletedData(savedCompletedData)
     setRehearsals(getRehearsals())
 
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const backToProgress = params?.get('tab') === 'progress'
+
     if (savedUser?.onboarded) {
       setUser(savedUser)
-      setScreen('home')
+      if (backToProgress) { setScreen('progress'); setActiveTab('progress') }
+      else setScreen('home')
     } else {
       setScreen('onboard1')
     }
 
     // Sync the real subscription tier from the profile. If the user is just
-    // back from Stripe Checkout, poll a couple of times to catch the webhook.
+    // back from Stripe Checkout or the billing portal, poll to catch the webhook.
     refreshTier()
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      if (params.get('checkout') === 'success') {
-        setTimeout(refreshTier, 1500)
-        setTimeout(refreshTier, 4000)
-        window.history.replaceState({}, '', window.location.pathname)
-      }
+    if (params && (params.get('checkout') === 'success' || backToProgress)) {
+      setTimeout(refreshTier, 1500)
+      setTimeout(refreshTier, 4000)
+      window.history.replaceState({}, '', window.location.pathname)
     }
   }, [refreshTier])
 
@@ -5851,6 +5882,7 @@ export default function App() {
             setActiveTrack={setActiveTrack}
             rehearsals={rehearsals}
             user={user}
+            onManageSubscription={startPortal}
           />
         )
 
