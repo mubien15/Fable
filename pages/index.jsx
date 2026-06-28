@@ -8,6 +8,7 @@ import {
 } from '../data/rehearsals'
 import { schedulePush, pushNow } from '../lib/cloudSync'
 import { supabase } from '../lib/supabaseClient'
+import { apiFetch } from '../lib/apiClient'
 
 // ═══════════════════════════════════════════════
 // FEATURE FLAGS
@@ -319,7 +320,7 @@ function useVoiceRecorder() {
     release()
     try {
       if (!blob || blob.size === 0) { setTranscribing(false); setError('No audio captured — try again.'); return '' }
-      const res = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': mimeRef.current }, body: blob })
+      const res = await apiFetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': mimeRef.current }, body: blob })
       const data = await res.json().catch(() => ({}))
       setTranscribing(false)
       const text = (data.text || '').trim()
@@ -1227,7 +1228,7 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
   const fetchCoach = async (history, userMessage) => {
     setLoading(true)
     try {
-      const res = await fetch('/api/coaching', {
+      const res = await apiFetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1239,6 +1240,11 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
           sessionHistory: history,
         }),
       })
+      if (res.status === 429) {
+        const info = await res.json().catch(() => ({}))
+        setMessages((prev) => [...prev, { role: 'coach', content: info.message || "You've reached today's free practice limit. Upgrade for unlimited practice, or come back tomorrow." }])
+        return
+      }
       const data = await res.json()
       const reply = (data.reply || '').trim() || "I'm here. Take your time — what's on your mind?"
       setMessages((prev) => [...prev, { role: 'coach', content: reply }])
@@ -1410,7 +1416,7 @@ function CoachDebriefScreen({ coachSession, setScreen, setSessions, sessions }) 
       setLoading(false)
       return
     }
-    fetch('/api/coaching', {
+    apiFetch('/api/coaching', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: 'coach-debrief', sessionHistory: msgs }),
@@ -1504,6 +1510,7 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState(false)
+  const [limitMsg, setLimitMsg]       = useState('')
 
   const chip = SCENARIO_CHIPS.find((c) => c.id === session?.scenario)
 
@@ -1511,8 +1518,9 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
     if (text.trim().length < 10 || loading) return
     setLoading(true)
     setSubmitError(false)
+    setLimitMsg('')
     try {
-      const res = await fetch('/api/coaching', {
+      const res = await apiFetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1522,6 +1530,11 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
             userRole: user?.role || 'all',
           }),
       })
+      if (res.status === 429) {
+        const info = await res.json().catch(() => ({}))
+        setLimitMsg(info.message || "You've reached today's free practice limit. Upgrade for unlimited practice, or come back tomorrow.")
+        return
+      }
       const data = await res.json()
       onFeedback({ feedback: data, userMessage: text.trim() })
       setScreen('feedback')
@@ -1573,6 +1586,13 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
         <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
           <p style={{ fontFamily: SANS, fontSize: 13, color: '#B91C1C', lineHeight: 1.5 }}>
             The coach took too long to respond — tap below to try again.
+          </p>
+        </div>
+      )}
+      {limitMsg && (
+        <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
+          <p style={{ fontFamily: SANS, fontSize: 13, color: C.coral, lineHeight: 1.5 }}>
+            {limitMsg}
           </p>
         </div>
       )}
@@ -1859,7 +1879,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
 
     try {
       const ttsText = spoken.length > 500 ? spoken.slice(0, 497) + '…' : spoken
-      const res = await fetch('/api/speak', {
+      const res = await apiFetch('/api/speak', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: ttsText, voice }),
@@ -2014,7 +2034,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         setTtsError('No audio captured — hold a moment longer before stopping.')
         return
       }
-      const res = await fetch('/api/transcribe', {
+      const res = await apiFetch('/api/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': recMimeRef.current },
         body: blob,
@@ -2086,7 +2106,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     if (wantsDebrief(text) && turn >= 2) {
       try {
         const conversationHistory = next.filter((m) => m.role !== 'coach')
-        const res = await fetch('/api/coaching', {
+        const res = await apiFetch('/api/coaching', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2118,7 +2138,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
         .filter((m) => m.role !== 'coach')
         .map((m) => ({ role: m.role, content: m.content }))
 
-      const res = await fetch('/api/coaching', {
+      const res = await apiFetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2131,6 +2151,15 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           archetypeSeed: session?.archetypeSeed ?? null,
         }),
       })
+      if (res.status === 429) {
+        const info = await res.json().catch(() => ({}))
+        setMessages((prev) => [...prev, {
+          role: 'coach',
+          content: info.message || "You've reached today's free practice limit. Upgrade for unlimited practice, or come back tomorrow.",
+        }])
+        setDone(true)
+        return
+      }
       const data = await res.json()
       const newTurn = turn + 1
       setTurn(newTurn)
@@ -2198,7 +2227,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
     if (hintLoading || loading) return
     setHintLoading(true)
     try {
-      const res = await fetch('/api/coaching', {
+      const res = await apiFetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3077,7 +3106,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
   useEffect(() => {
     if (!progress.hasEnoughForProfile || profile !== null) return
     setProfileLoading(true)
-    fetch('/api/coaching', {
+    apiFetch('/api/coaching', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -4364,7 +4393,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
       return
     }
     setLoading(true)
-    fetch('/api/coaching', {
+    apiFetch('/api/coaching', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -4373,7 +4402,7 @@ function ScenarioDebriefScreen({ session, onBack, onTryAgain, onMarkComplete, co
         scenario: { title: scenario.title, challenge: scenario.challenge || '', coaching_focus: scenario.coaching_focus || [] },
       }),
     })
-      .then((r) => r.json())
+      .then((r) => { if (r.status === 429) throw new Error('daily_limit'); return r.json() })
       .then((d) => setDebrief(d))
       .catch(() => {
         const focusScores = {}
@@ -4956,7 +4985,7 @@ function RehearseBuildScreen({ onCancel, onBuilt, initialSituation = '' }) {
     }
     try {
       const styleHint = REHEARSE_PERSONA_STYLES.find((p) => p.id === personaStyle)?.prompt || ''
-      const res = await fetch('/api/coaching', {
+      const res = await apiFetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'generate-scenario', rehearsal: { ...rehearsal, personaStylePrompt: styleHint } }),
@@ -5457,7 +5486,7 @@ export default function App() {
     const rehearsal = getRehearsals().find((r) => r.id === rehearsalId)
     if (!rehearsal) return
     try {
-      const res = await fetch('/api/coaching', {
+      const res = await apiFetch('/api/coaching', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

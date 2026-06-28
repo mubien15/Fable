@@ -1,7 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { buildCoachingFeedbackSystem, buildScenarioPrompt, PATTERN_SYSTEM, buildCoachPrompt } from '../../lib/coachPrompt'
+import { enforceLimit } from '../../lib/usageLimit'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+// Lightweight, read-only modes that don't generate billable content on every
+// keystroke and shouldn't burn a free user's daily quota.
+const UNMETERED_MODES = new Set(['pattern', 'profile'])
 
 // ─── Fallback when API fails ───────────────────────────────────────────────
 
@@ -33,6 +38,12 @@ export default async function handler(req, res) {
     userRole = 'all', // auditor | consultant | manager | all
     difficulty = 'medium',
   } = req.body
+
+  // ── Free-tier daily usage cap (skips lightweight, non-generative modes) ──
+  if (!UNMETERED_MODES.has(mode)) {
+    const gate = await enforceLimit(req)
+    if (!gate.ok) return res.status(gate.status).json(gate.body)
+  }
 
   try {
 

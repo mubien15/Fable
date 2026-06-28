@@ -1,9 +1,15 @@
+import { requireUser } from '../../lib/usageLimit'
+
 const VALID_VOICES = new Set(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'])
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
+
+  // Require a signed-in user so this costly endpoint can't be hammered anonymously.
+  const user = await requireUser(req)
+  if (!user) return res.status(401).json({ error: 'Please sign in again.' })
 
   const { text, voice: rawVoice = 'onyx' } = req.body
   const voice = VALID_VOICES.has(rawVoice) ? rawVoice : 'onyx'
