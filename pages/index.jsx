@@ -3106,6 +3106,42 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
     </p>
   )
 
+  // Account controls — shared by the empty and populated Progress states so a
+  // user who subscribes before doing any sessions can still manage their plan.
+  const isPaid = TIER_GATING_ENABLED && user?.tier && user.tier !== 'free'
+  const accountSection = (
+    <div style={{ marginTop: 28, textAlign: 'center' }}>
+      {isPaid ? (
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, marginBottom: 8 }}>
+            You’re on the <strong style={{ color: C.ink, textTransform: 'capitalize' }}>{user.tier}</strong> plan.
+          </p>
+          <button
+            onClick={onManageSubscription}
+            style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 24, padding: '10px 20px', fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.blue, boxShadow: SHADOW.card }}
+          >
+            Manage subscription
+          </button>
+        </div>
+      ) : TIER_GATING_ENABLED && user?.tier === 'free' ? (
+        <div style={{ marginBottom: 16 }}>
+          <button
+            onClick={() => setScreen('upgrade')}
+            style={{ border: 'none', borderRadius: 24, padding: '11px 22px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, boxShadow: SHADOW.coral }}
+          >
+            Unlock founding access →
+          </button>
+        </div>
+      ) : null}
+      <button
+        onClick={async () => { await pushNow(); await supabase.auth.signOut() }}
+        style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkSoft, padding: 8 }}
+      >
+        Log out
+      </button>
+    </div>
+  )
+
   // ── Empty state ────────────────────────────────────────────────────────────
   if (progress.completedSessions === 0 && rehearsals.length === 0) {
     return (
@@ -3122,14 +3158,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           The picture gets clearer the more you practice.
         </p>
         <Btn onClick={() => { setScreen('daily-rep') }}>Start your first rep →</Btn>
-        <div style={{ marginTop: 28 }}>
-          <button
-            onClick={async () => { await pushNow(); await supabase.auth.signOut() }}
-            style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkSoft, padding: 8 }}
-          >
-            Log out
-          </button>
-        </div>
+        {accountSection}
       </div>
     )
   }
@@ -3327,43 +3356,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
         </a>
       </div>
 
-      {/* ── Upgrade (free tier) ───────────────────────────────────────────── */}
-      {TIER_GATING_ENABLED && user?.tier === 'free' && (
-        <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
-          <button
-            onClick={() => setScreen('upgrade')}
-            style={{ width: '100%', border: 'none', borderRadius: 14, padding: '15px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 15, fontWeight: 700, boxShadow: SHADOW.coral }}
-          >
-            Unlock founding access →
-          </button>
-          <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
-            All 30+ scenarios + Rehearse, at a rate locked for life.
-          </p>
-        </div>
-      )}
-
-      {/* ── Account ───────────────────────────────────────────────────────── */}
-      <div style={{ marginTop: 28, textAlign: 'center' }}>
-        {TIER_GATING_ENABLED && user?.tier && user.tier !== 'free' && (
-          <div style={{ marginBottom: 14 }}>
-            <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, marginBottom: 8 }}>
-              You’re on the <strong style={{ color: C.ink, textTransform: 'capitalize' }}>{user.tier}</strong> plan.
-            </p>
-            <button
-              onClick={onManageSubscription}
-              style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 24, padding: '10px 20px', fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.blue, boxShadow: SHADOW.card }}
-            >
-              Manage subscription
-            </button>
-          </div>
-        )}
-        <button
-          onClick={async () => { await pushNow(); await supabase.auth.signOut() }}
-          style={{ background: 'none', border: 'none', fontFamily: SANS, fontSize: 13, fontWeight: 600, color: C.inkSoft, padding: 8 }}
-        >
-          Log out
-        </button>
-      </div>
+      {accountSection}
     </div>
   )
 }
