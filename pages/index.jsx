@@ -15,7 +15,7 @@ import { supabase } from '../lib/supabaseClient'
 // Master switch for free/paid tier gating (locked scenarios + Rehearse).
 // Set to false for a completely open app (no friction). Flip to true to
 // re-enable the founding-members paywall.
-const TIER_GATING_ENABLED = false
+const TIER_GATING_ENABLED = true
 
 // ═══════════════════════════════════════════════
 // DESIGN TOKENS
@@ -3062,7 +3062,7 @@ function ProgressSessionLog({ sessions, completedData, rehearsals = [] }) {
 // ═══════════════════════════════════════════════
 // PROGRESS SCREEN — MAIN DASHBOARD
 // ═══════════════════════════════════════════════
-function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack, rehearsals = [] }) {
+function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBriefing, setActiveTrack, rehearsals = [], user }) {
   const progress = useProgressData(sessions, dailyRep, completedData)
   const rehearseStats = {
     created:   rehearsals.length,
@@ -3326,6 +3326,21 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
           <LineIcon id="chat" color={C.blue} size={16} /> Share feedback
         </a>
       </div>
+
+      {/* ── Upgrade (free tier) ───────────────────────────────────────────── */}
+      {TIER_GATING_ENABLED && user?.tier === 'free' && (
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
+          <button
+            onClick={() => setScreen('upgrade')}
+            style={{ width: '100%', border: 'none', borderRadius: 14, padding: '15px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 15, fontWeight: 700, boxShadow: SHADOW.coral }}
+          >
+            Unlock founding access →
+          </button>
+          <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
+            All 30+ scenarios + Rehearse, at a rate locked for life.
+          </p>
+        </div>
+      )}
 
       {/* ── Account ───────────────────────────────────────────────────────── */}
       <div style={{ marginTop: 28, textAlign: 'center' }}>
@@ -3923,7 +3938,7 @@ const DIFFICULTY_META = {
   hard:   { label: 'Hard',   color: C => C.coral,  bg: C => C.coralBg,  desc: 'Defensive, will push back hard'        },
 }
 
-function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefing, currentSession, completedScenarios = [], user }) {
+function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefing, currentSession, completedScenarios = [], user, onUpgrade }) {
   const [selected, setSelected] = useState(null)
   const isFreeTier = TIER_GATING_ENABLED && user?.tier === 'free'
 
@@ -4034,9 +4049,9 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                       <p style={{ fontFamily: SERIF, fontSize: 13, color: C.inkMid, lineHeight: 1.5, marginBottom: 12 }}>
                         This scenario is part of the full Fable library. Founding members get all 30+ scenarios at a rate locked for life.
                       </p>
-                      <a href="https://www.scenariolab.quest#pricing" style={{ display: 'block', padding: '11px', borderRadius: 12, background: C.coral, color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                        See founding access →
-                      </a>
+                      <button onClick={onUpgrade} style={{ display: 'block', width: '100%', border: 'none', padding: '12px', borderRadius: 12, background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, boxShadow: SHADOW.coral }}>
+                        Unlock all scenarios →
+                      </button>
                     </div>
                   ) : isResumable ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -4054,6 +4069,79 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
+// UPGRADE / PAYWALL SCREEN
+// ═══════════════════════════════════════════════
+function UpgradeScreen({ onCheckout, onBack }) {
+  const [busy, setBusy] = useState(null)   // 'monthly' | 'annual'
+  const go = async (plan) => { setBusy(plan); await onCheckout(plan); setBusy(null) }
+
+  const features = [
+    'All 30+ scenarios, with new ones added regularly',
+    'Rehearse mode — build a simulation for your real conversation',
+    'All pressure levels and counterpart personalities',
+    'Detailed coaching feedback and progress tracking',
+  ]
+  const Feature = ({ children }) => (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 9, alignItems: 'flex-start' }}>
+      <span style={{ color: C.teal, fontSize: 14, flexShrink: 0, marginTop: 1 }}>✓</span>
+      <p style={{ fontFamily: SANS, fontSize: 13, color: C.inkMid, lineHeight: 1.5 }}>{children}</p>
+    </div>
+  )
+
+  return (
+    <div className="fade-up" style={{ padding: '28px 20px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+      <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 18, padding: 0 }}>←</button>
+
+      <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Founding access
+      </p>
+      <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1.2, marginBottom: 8 }}>
+        Unlock the full Fable
+      </h1>
+      <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.55, marginBottom: 24 }}>
+        Everything Fable is and becomes — at a founding rate locked for life.
+      </p>
+
+      {/* Annual — featured */}
+      <div style={{ background: C.ink, borderRadius: 20, padding: '22px', marginBottom: 14, position: 'relative', boxShadow: SHADOW.lift }}>
+        <span style={{ position: 'absolute', top: 18, right: 18, background: C.coral, color: '#fff', fontFamily: SANS, fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', padding: '4px 9px', borderRadius: 20 }}>
+          First 50 only
+        </span>
+        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: '#FFB4A3', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Annual · Founding</p>
+        <p style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 700, color: '#fff', lineHeight: 1, marginBottom: 2, ...STAT_NUM }}>
+          $99<span style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}> /year</span>
+        </p>
+        <p style={{ fontFamily: SANS, fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 18 }}>That’s under $8.25/month · save 57% vs monthly</p>
+        <button onClick={() => go('annual')} disabled={!!busy}
+          style={{ width: '100%', border: 'none', borderRadius: 12, padding: '14px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 15, fontWeight: 700, boxShadow: SHADOW.coral, opacity: busy && busy !== 'annual' ? 0.5 : 1 }}>
+          {busy === 'annual' ? 'Opening checkout…' : 'Get founding access →'}
+        </button>
+      </div>
+
+      {/* Monthly */}
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: '22px', marginBottom: 22, boxShadow: SHADOW.card }}>
+        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Monthly</p>
+        <p style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 2, ...STAT_NUM }}>
+          $19<span style={{ fontSize: 15, fontWeight: 600, color: C.inkFaint }}> /month</span>
+        </p>
+        <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, marginBottom: 18 }}>Cancel anytime</p>
+        <button onClick={() => go('monthly')} disabled={!!busy}
+          style={{ width: '100%', border: `1.5px solid ${C.border}`, borderRadius: 12, padding: '14px', background: 'transparent', color: C.ink, fontFamily: SANS, fontSize: 15, fontWeight: 700, opacity: busy && busy !== 'monthly' ? 0.5 : 1 }}>
+          {busy === 'monthly' ? 'Opening checkout…' : 'Start monthly'}
+        </button>
+      </div>
+
+      <div style={{ marginBottom: 8 }}>
+        {features.map((f, i) => <Feature key={i}>{f}</Feature>)}
+      </div>
+      <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint, textAlign: 'center', marginTop: 18, lineHeight: 1.5 }}>
+        Secure checkout via Stripe · Prices in CAD · Cancel anytime
+      </p>
     </div>
   )
 }
@@ -4639,7 +4727,7 @@ const REHEARSE_PERSONA_STYLES = [
 ]
 
 // ── Entry screen — empty + active states ─────────────────────────────────────
-function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDelete, goToScenarios }) {
+function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDelete, goToScenarios, onUpgrade }) {
   const upcoming = rehearsals.filter((r) => r.status !== 'done')
   const past     = rehearsals.filter((r) => r.status === 'done')
 
@@ -4658,9 +4746,9 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDele
           <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.6, marginBottom: 18 }}>
             Rehearse builds a simulation <strong style={{ color: C.coral }}>personalized to you</strong> — your exact situation, the real person you're facing, and what you're worried about. It's part of the full Fable membership.
           </p>
-          <a href="https://www.scenariolab.quest#pricing" style={{ display: 'block', padding: '13px', borderRadius: 12, background: C.coral, color: '#fff', fontFamily: SANS, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
-            See founding access →
-          </a>
+          <button onClick={onUpgrade} style={{ display: 'block', width: '100%', border: 'none', padding: '14px', borderRadius: 12, background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 14, fontWeight: 700, boxShadow: SHADOW.coral }}>
+            Unlock Rehearse →
+          </button>
         </div>
 
         <button onClick={goToScenarios} style={{ display: 'block', margin: '0 auto', background: 'none', border: 'none', color: C.coral, fontFamily: SANS, fontSize: 14, fontWeight: 600 }}>
@@ -5180,6 +5268,44 @@ export default function App() {
 
   const refreshRehearsals = () => setRehearsals(getRehearsals())
 
+  // Pull the authoritative subscription tier from the user's Supabase profile
+  // (the Stripe webhook keeps it current) and merge it into the local user.
+  const refreshTier = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const { data: profile } = await supabase
+        .from('profiles').select('tier').eq('id', session.user.id).maybeSingle()
+      if (profile && profile.tier) {
+        setUser((prev) => {
+          const base = prev || lsGet(LS.user, {}) || {}
+          if (base.tier === profile.tier) return prev
+          const next = { ...base, tier: profile.tier }
+          lsSet(LS.user, next)
+          return next
+        })
+      }
+    } catch {}
+  }, [])
+
+  // Redirect the signed-in user to Stripe Checkout for the chosen plan.
+  const startCheckout = useCallback(async (plan) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else alert(data.error || 'Could not start checkout — please try again.')
+    } catch {
+      alert('Could not start checkout — please try again.')
+    }
+  }, [])
+
   // Load from localStorage on mount
   useEffect(() => {
     const savedUser          = lsGet(LS.user, null)
@@ -5196,21 +5322,25 @@ export default function App() {
     setCompletedData(savedCompletedData)
     setRehearsals(getRehearsals())
 
-    if (typeof window !== 'undefined') {
-      const urlPlan = new URLSearchParams(window.location.search).get('plan')
-      if (urlPlan === 'free' || urlPlan === 'full') {
-        setPendingTier(urlPlan)
-        if (savedUser) { savedUser.tier = urlPlan; lsSet(LS.user, savedUser) }
-      }
-    }
-
     if (savedUser?.onboarded) {
       setUser(savedUser)
       setScreen('home')
     } else {
       setScreen('onboard1')
     }
-  }, [])
+
+    // Sync the real subscription tier from the profile. If the user is just
+    // back from Stripe Checkout, poll a couple of times to catch the webhook.
+    refreshTier()
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('checkout') === 'success') {
+        setTimeout(refreshTier, 1500)
+        setTimeout(refreshTier, 4000)
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    }
+  }, [refreshTier])
 
   // Navigation
   const goTab = (tab) => {
@@ -5220,9 +5350,10 @@ export default function App() {
 
   // Onboarding flow
   const finishOnboarding = (upcomingMoment) => {
-    const u = { name: obName, role: obRole, upcomingMoment, onboarded: true, tier: pendingTier || 'full' }
+    const u = { name: obName, role: obRole, upcomingMoment, onboarded: true, tier: pendingTier || 'free' }
     lsSet(LS.user, u)
     setUser(u)
+    refreshTier()  // adopt the real tier from the profile (Stripe-driven)
     // If they named a conversation to prepare for, take them straight into the
     // Rehearse build with it pre-filled — don't make them re-type it.
     // (Rehearse is a paid feature, so free-tier users go home instead.)
@@ -5667,6 +5798,15 @@ export default function App() {
             onReflect={(r) => { setActiveRehearsal(r); setScreen('rehearse-reflect') }}
             onDelete={(r) => { deleteRehearsal(r.id); refreshRehearsals() }}
             goToScenarios={() => goTab('scenarios')}
+            onUpgrade={() => setScreen('upgrade')}
+          />
+        )
+
+      case 'upgrade':
+        return (
+          <UpgradeScreen
+            onCheckout={startCheckout}
+            onBack={() => { setScreen('home'); setActiveTab('home') }}
           />
         )
 
@@ -5710,6 +5850,7 @@ export default function App() {
             openBriefing={openBriefing}
             setActiveTrack={setActiveTrack}
             rehearsals={rehearsals}
+            user={user}
           />
         )
 
@@ -5795,6 +5936,7 @@ export default function App() {
             completedScenarios={completedScenarios}
             currentSession={currentSession}
             user={user}
+            onUpgrade={() => setScreen('upgrade')}
           />
         )
 
