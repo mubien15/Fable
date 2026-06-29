@@ -662,7 +662,7 @@ function SubHeader({ title, onBack }) {
 function OnboardDots({ step }) {
   return (
     <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 36 }}>
-      {[1, 2, 3].map((s) => (
+      {[1, 2, 3, 4].map((s) => (
         <div key={s} style={{
           width: s === step ? 20 : 7, height: 7, borderRadius: 4,
           background: s === step ? C.coral : C.coralDim,
@@ -794,6 +794,71 @@ function Onboard3({ onNext, onSkip }) {
         <Btn variant="ghost" onClick={onSkip}>I'll explore on my own →</Btn>
       </div>
       <PrivacyNote />
+    </div>
+  )
+}
+
+function OnboardInstall({ onDone }) {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && typeof navigator !== 'undefined' && navigator.maxTouchPoints > 1)
+  const isAndroid = /Android/.test(ua)
+  const isStandalone = typeof window !== 'undefined' &&
+    ((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone)
+
+  const steps = isIOS
+    ? [
+        <>Tap the <strong style={{ color: C.coral }}>Share</strong> button at the bottom of Safari (the box with an ↑).</>,
+        <>Scroll down and tap <strong style={{ color: C.coral }}>Add to Home Screen</strong>.</>,
+        <>Tap <strong style={{ color: C.coral }}>Add</strong> — and Fable lands on your home screen.</>,
+      ]
+    : isAndroid
+    ? [
+        <>Tap the <strong style={{ color: C.coral }}>⋮ menu</strong> in Chrome (top-right).</>,
+        <>Tap <strong style={{ color: C.coral }}>Add to Home screen</strong> (or <strong style={{ color: C.coral }}>Install app</strong>).</>,
+        <>Confirm — Fable installs and opens like a real app.</>,
+      ]
+    : [
+        <>On your phone, open <strong style={{ color: C.coral }}>fable-nu.vercel.app</strong> in your browser.</>,
+        <>Open the browser <strong style={{ color: C.coral }}>Share</strong> or menu.</>,
+        <>Choose <strong style={{ color: C.coral }}>Add to Home Screen</strong>.</>,
+      ]
+
+  return (
+    <div className="fade-up" style={{ padding: '60px 28px 40px' }}>
+      <OnboardDots step={4} />
+
+      <svg width="60" height="60" viewBox="0 0 512 512" style={{ display: 'block', margin: '0 auto 18px', filter: 'drop-shadow(0 10px 22px rgba(28,43,74,0.20))' }}>
+        <rect width="512" height="512" rx="115" fill={C.coral} />
+        <rect x="146" y="158" width="220" height="154" rx="52" fill="#FFFFFF" />
+        <polygon points="179,301 168,367 245,301" fill="#FFFFFF" />
+      </svg>
+
+      <div style={{ marginBottom: 24, textAlign: 'center' }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 600, color: C.ink, marginBottom: 8, lineHeight: 1.25 }}>
+          Keep Fable one tap away
+        </h1>
+        <p style={{ color: C.inkSoft, fontSize: 15, lineHeight: 1.65 }}>
+          {isStandalone
+            ? "You're all set — Fable is already on your home screen."
+            : 'Add Fable to your home screen so it opens full-screen, like a real app. No App Store needed.'}
+        </p>
+      </div>
+
+      {!isStandalone && (
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: '20px 18px', marginBottom: 24 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: i === steps.length - 1 ? 0 : 16 }}>
+              <span style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: C.coralBg, color: C.coral, fontFamily: SANS, fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+              <p style={{ fontFamily: SANS, fontSize: 14.5, color: C.inkMid, lineHeight: 1.55, paddingTop: 2 }}>{s}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <Btn onClick={onDone}>{isStandalone ? 'Continue →' : 'Done — take me in →'}</Btn>
+        {!isStandalone && <Btn variant="ghost" onClick={onDone}>I'll do this later</Btn>}
+      </div>
     </div>
   )
 }
@@ -5299,6 +5364,7 @@ export default function App() {
   // Onboarding state
   const [obName, setObName] = useState('')
   const [obRole, setObRole] = useState('')
+  const [obMoment, setObMoment] = useState('')
 
   // Session state
   const [currentSession, setCurrentSession] = useState(null)
@@ -5685,7 +5751,7 @@ export default function App() {
   }
 
   const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab', 'daily-rep', 'daily-rep-briefing', 'daily-rep-debrief', 'scenario-briefing', 'scenario-debrief']
-  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'simulation', 'coach-conversation', 'daily-rep-insight', 'rehearse-build', 'rehearse-note', 'rehearse-reflect'].includes(screen)
+  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'onboard-install', 'simulation', 'coach-conversation', 'daily-rep-insight', 'rehearse-build', 'rehearse-note', 'rehearse-reflect'].includes(screen)
 
   const renderScreen = () => {
     switch (screen) {
@@ -5705,10 +5771,13 @@ export default function App() {
       case 'onboard3':
         return (
           <Onboard3
-            onNext={(moment) => finishOnboarding(moment)}
-            onSkip={() => finishOnboarding('')}
+            onNext={(moment) => { setObMoment(moment); setScreen('onboard-install') }}
+            onSkip={() => { setObMoment(''); setScreen('onboard-install') }}
           />
         )
+
+      case 'onboard-install':
+        return <OnboardInstall onDone={() => finishOnboarding(obMoment)} />
 
       case 'home':
         return (
