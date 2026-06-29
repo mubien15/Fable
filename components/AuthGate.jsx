@@ -36,6 +36,30 @@ const card = {
   boxShadow: '0 22px 48px -26px rgba(28,43,74,0.30), 0 3px 10px -6px rgba(28,43,74,0.10)',
 }
 
+// ─── Brand wordmark — the dot in "F.able" is a speech bubble ───────────────
+function Wordmark({ size = 40 }) {
+  const textShadow = '0 2px 6px rgba(28,43,74,0.16)'
+  const letter = {
+    fontFamily: SANS, fontSize: size, fontWeight: 700, lineHeight: 1,
+    letterSpacing: '-0.03em', textShadow,
+  }
+  const bw = Math.round(size * 0.46)
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'flex-end' }}>
+      <span style={{ ...letter, color: C.coral }}>F</span>
+      <svg
+        width={bw} height={Math.round(bw * 0.92)} viewBox="0 0 24 22"
+        style={{ display: 'block', margin: `0 0 ${size * 0.09}px -${size * 0.03}px`,
+                 filter: 'drop-shadow(0 2px 4px rgba(28,43,74,0.18))' }}
+      >
+        <rect x="2" y="2" width="20" height="14" rx="5" fill={C.coral} />
+        <polygon points="5,15 4,21 11,15" fill={C.coral} />
+      </svg>
+      <span style={{ ...letter, color: C.navy, marginLeft: -size * 0.02 }}>able</span>
+    </span>
+  )
+}
+
 export default function AuthGate({ children }) {
   const [checked, setChecked] = useState(false)
   const [session, setSession] = useState(null)
@@ -138,8 +162,8 @@ export default function AuthGate({ children }) {
     if (!hydrated) {
       return (
         <div style={{ minHeight: '100dvh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
-          <h1 style={{ fontFamily: SANS, fontSize: 34, fontWeight: 700, letterSpacing: '-0.01em' }}>
-            <span style={{ color: C.coral }}>F</span><span style={{ color: C.navy }}>.able</span>
+          <h1 style={{ margin: 0, lineHeight: 1 }}>
+            <Wordmark size={34} />
           </h1>
           <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${C.border}`, borderTopColor: C.coral, animation: 'spin 0.7s linear infinite' }} />
         </div>
@@ -170,8 +194,8 @@ export default function AuthGate({ children }) {
       <div style={{ width: '100%', maxWidth: 384 }}>
         {/* Brand + value proposition */}
         <div style={{ textAlign: 'center', marginBottom: 22 }}>
-          <h1 style={{ fontFamily: SANS, fontSize: 38, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: showPitch ? 18 : 0 }}>
-            <span style={{ color: C.coral }}>F</span><span style={{ color: C.navy }}>.able</span>
+          <h1 style={{ margin: 0, marginBottom: showPitch ? 18 : 0, lineHeight: 1 }}>
+            <Wordmark size={40} />
           </h1>
           {showPitch && (
             <p style={{ fontFamily: SANS, fontSize: 22, fontWeight: 500, lineHeight: 1.32, letterSpacing: '-0.02em', color: C.navy, margin: '0 auto', maxWidth: 340 }}>
