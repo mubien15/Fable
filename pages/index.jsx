@@ -803,13 +803,24 @@ function Onboard3({ onNext, onSkip }) {
 // ═══════════════════════════════════════════════
 const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface, career: C.surface }
 
-function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay }) {
+function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onResumeSession, setActiveTrack, onStartDay, onUpgrade }) {
   const greeting = (() => {
     const h = new Date().getHours()
     if (h < 12) return 'Good morning'
     if (h < 17) return 'Good afternoon'
     return 'Good evening'
   })()
+
+  // Free users who named an upcoming conversation in onboarding see it here as a
+  // teaser for Rehearse (a paid feature) — so their input isn't lost.
+  const [teaserDismissed, setTeaserDismissed] = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem('fable_rehearse_teaser') === 'dismissed')
+  const dismissTeaser = () => {
+    try { localStorage.setItem('fable_rehearse_teaser', 'dismissed') } catch {}
+    setTeaserDismissed(true)
+  }
+  const showRehearseTeaser =
+    TIER_GATING_ENABLED && user?.tier === 'free' && !!user?.upcomingMoment?.trim() && !teaserDismissed
 
   const currentDayIndex = Math.min((dailyRep.currentDay || 1) - 1, 29)
   const currentDayData  = DAILY_REP_PROGRAM[currentDayIndex]
@@ -847,6 +858,23 @@ function HomeScreen({ user, sessions, rehearsals = [], dailyRep, setScreen, onRe
           What conversation will you practice today?
         </p>
       </div>
+
+      {/* ── Rehearse teaser (free users who named an upcoming conversation) ── */}
+      {showRehearseTeaser && (
+        <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 18, padding: '18px 20px', marginBottom: 28, position: 'relative' }}>
+          <button onClick={dismissTeaser} aria-label="Dismiss" style={{ position: 'absolute', top: 8, right: 10, background: 'none', border: 'none', color: C.inkFaint, fontSize: 20, lineHeight: 1, cursor: 'pointer', padding: 4 }}>×</button>
+          <p style={{ fontFamily: SANS, fontSize: 10.5, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', color: C.coral, marginBottom: 8 }}>The conversation you mentioned</p>
+          <p style={{ fontFamily: SERIF, fontSize: 16, fontStyle: 'italic', color: C.ink, lineHeight: 1.55, marginBottom: 12 }}>
+            "{user.upcomingMoment.trim()}"
+          </p>
+          <p style={{ fontFamily: SANS, fontSize: 13.5, color: C.inkMid, lineHeight: 1.6, marginBottom: 16 }}>
+            With <strong style={{ color: C.coral }}>Rehearse</strong>, Fable builds a private simulation around exactly this — the real person, the pressure, what you're worried about — so you can practice it before it's real.
+          </p>
+          <button onClick={onUpgrade} style={{ display: 'block', width: '100%', border: 'none', padding: '13px', borderRadius: 12, background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 14, fontWeight: 700, boxShadow: SHADOW.coral, cursor: 'pointer' }}>
+            Unlock Rehearse →
+          </button>
+        </div>
+      )}
 
       {/* ── Daily Practice ── */}
       <div style={{ marginBottom: 28 }}>
@@ -5692,6 +5720,7 @@ export default function App() {
             setScreen={(s) => { setScreen(s); if (['coach','progress','daily-rep'].includes(s)) setActiveTab(s === 'daily-rep' ? 'home' : s) }}
             setActiveTrack={setActiveTrack}
             onStartDay={startDailyRep}
+            onUpgrade={() => setScreen('upgrade')}
             onResumeSession={(s) => {
               setCurrentSession(s)
               if (s.feedback) {
