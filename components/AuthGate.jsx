@@ -29,17 +29,11 @@ const linkBtn = {
   background: 'none', border: 'none', color: C.coral,
   fontFamily: SANS, fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 4,
 }
-const SERIF = "ui-serif, 'New York', Georgia, 'Times New Roman', serif"
 const PAGE_BG = 'radial-gradient(130% 85% at 50% -12%, rgba(232,100,74,0.14) 0%, rgba(232,100,74,0) 56%), #FAF7F2'
 const card = {
   background: C.surface, border: `1px solid ${C.border}`, borderRadius: 22,
   padding: '26px 22px 22px',
   boxShadow: '0 22px 48px -26px rgba(28,43,74,0.30), 0 3px 10px -6px rgba(28,43,74,0.10)',
-}
-const chip = {
-  fontFamily: SANS, fontSize: 11.5, fontWeight: 600, color: C.inkSoft,
-  background: 'rgba(255,255,255,0.65)', border: `1px solid ${C.border}`,
-  borderRadius: 999, padding: '5px 11px', whiteSpace: 'nowrap',
 }
 
 export default function AuthGate({ children }) {
@@ -155,15 +149,15 @@ export default function AuthGate({ children }) {
   }
 
   const titles = {
-    signin:   'Welcome back',
+    signin:   'Welcome',
     signup:   'Create your account',
     forgot:   'Reset your password',
     sent:     'Check your email',
     recovery: 'Set a new password',
   }
   const subtitles = {
-    signin:   'Log in to keep practicing.',
-    signup:   'Start practicing the conversations that matter.',
+    signin:   'Glad you’re here.',
+    signup:   'Start preparing for the moments that matter.',
     forgot:   'We’ll email you a link to set a new one.',
     sent:     '',
     recovery: 'Choose a new password for your account.',
@@ -180,23 +174,18 @@ export default function AuthGate({ children }) {
             <span style={{ color: C.coral }}>F</span><span style={{ color: C.navy }}>.able</span>
           </h1>
           {showPitch && (
-            <>
-              <p style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.28, color: C.navy, fontWeight: 500, letterSpacing: '-0.01em', margin: '0 auto 9px', maxWidth: 320 }}>
-                Practice the conversations that matter.
-              </p>
-              <p style={{ fontFamily: SANS, fontSize: 14, lineHeight: 1.55, color: C.inkSoft, margin: '0 auto', maxWidth: 300 }}>
-                Rehearse tough talks with a realistic AI partner, then get honest, private coaching.
-              </p>
-            </>
+            <p style={{ fontFamily: SANS, fontSize: 29, fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.025em', color: C.navy, margin: '0 auto', maxWidth: 330 }}>
+              Practice the conversations that shape your career.
+            </p>
           )}
         </div>
 
         {/* Card */}
         <div style={card}>
-          <h2 style={{ fontFamily: SANS, fontSize: 21, fontWeight: 700, color: C.navy, textAlign: 'center', marginBottom: showPitch ? 18 : 6 }}>
+          <h2 style={{ fontFamily: SANS, fontSize: 21, fontWeight: 700, color: C.navy, textAlign: 'center', marginBottom: 6 }}>
             {titles[mode]}
           </h2>
-          {!showPitch && subtitles[mode] && (
+          {subtitles[mode] && (
             <p style={{ fontFamily: SANS, fontSize: 14, color: C.inkSoft, textAlign: 'center', marginBottom: 22, lineHeight: 1.5 }}>
               {subtitles[mode]}
             </p>
@@ -270,16 +259,7 @@ export default function AuthGate({ children }) {
           </div>
         </div>
 
-        {/* Feature chips — what Fable is, at a glance */}
-        {showPitch && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 18 }}>
-            <span style={chip}>Realistic AI role-play</span>
-            <span style={chip}>Honest coaching</span>
-            <span style={chip}>Private &amp; secure</span>
-          </div>
-        )}
-
-        <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint, textAlign: 'center', marginTop: showPitch ? 20 : 24, lineHeight: 1.6 }}>
+        <p style={{ fontFamily: SANS, fontSize: 11, color: C.inkFaint, textAlign: 'center', marginTop: 24, lineHeight: 1.6 }}>
           By continuing you agree to our{' '}
           <a href="/terms" style={{ color: C.inkSoft }}>Terms</a> and{' '}
           <a href="/privacy" style={{ color: C.inkSoft }}>Privacy Policy</a>.
