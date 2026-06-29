@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { buildCoachingFeedbackSystem, buildScenarioPrompt, PATTERN_SYSTEM, buildCoachPrompt } from '../../lib/coachPrompt'
-import { enforceLimit } from '../../lib/usageLimit'
+import { enforceLimit, enforceSessionStart } from '../../lib/usageLimit'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -38,6 +38,18 @@ export default async function handler(req, res) {
     userRole = 'all', // auditor | consultant | manager | all
     difficulty = 'medium',
   } = req.body
+
+  // ── Free-tier daily practice-session cap ─────────────────────────────────
+  // A new scenario session = the first 'simulation' turn (no user message yet
+  // in the history; only the counterpart's opening line). Count it toward the
+  // free daily session limit before doing anything else.
+  if (mode === 'simulation') {
+    const isNewSession = !Array.isArray(sessionHistory) || !sessionHistory.some((m) => m.role === 'user')
+    if (isNewSession) {
+      const sGate = await enforceSessionStart(req)
+      if (!sGate.ok) return res.status(sGate.status).json(sGate.body)
+    }
+  }
 
   // ── Free-tier daily usage cap (skips lightweight, non-generative modes) ──
   if (!UNMETERED_MODES.has(mode)) {
