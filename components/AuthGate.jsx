@@ -174,8 +174,8 @@ export default function AuthGate({ children }) {
             <span style={{ color: C.coral }}>F</span><span style={{ color: C.navy }}>.able</span>
           </h1>
           {showPitch && (
-            <p style={{ fontFamily: SANS, fontSize: 29, fontWeight: 600, lineHeight: 1.2, letterSpacing: '-0.025em', color: C.navy, margin: '0 auto', maxWidth: 330 }}>
-              Practice the conversations that shape your career.
+            <p style={{ fontFamily: SANS, fontSize: 22, fontWeight: 500, lineHeight: 1.32, letterSpacing: '-0.02em', color: C.navy, margin: '0 auto', maxWidth: 340 }}>
+              Get ready for the conversations that move your career.
             </p>
           )}
         </div>
