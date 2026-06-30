@@ -864,6 +864,41 @@ function OnboardInstall({ onDone }) {
 }
 
 // ═══════════════════════════════════════════════
+// CHECKOUT SUCCESS BANNER
+// Shown on return from Stripe Checkout while we wait for the webhook to flip the
+// tier ('pending'), then a brief confirmation ('done') so the upgrade feels real.
+// ═══════════════════════════════════════════════
+function CheckoutBanner({ status, onDismiss }) {
+  useEffect(() => {
+    if (status === 'done') {
+      const t = setTimeout(onDismiss, 5000)
+      return () => clearTimeout(t)
+    }
+  }, [status, onDismiss])
+
+  const done = status === 'done'
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+      padding: '12px 18px',
+      background: done ? C.teal : C.ink,
+      color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 600,
+      boxShadow: '0 4px 14px rgba(28,43,74,0.18)',
+    }}>
+      {done ? (
+        <span>🎉 You’re in — founding access unlocked.</span>
+      ) : (
+        <>
+          <Dots />
+          <span>Finalizing your upgrade…</span>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════
 const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface, career: C.surface }
@@ -1294,6 +1329,7 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
   const [messages, setMessages] = useState([])
   const [input,    setInput]    = useState('')
   const [loading,  setLoading]  = useState(true)
+  const [capHit,   setCapHit]   = useState(false)  // free-tier daily limit reached → offer upgrade
   const rec        = useVoiceRecorder()
   const bottomRef  = useRef(null)
   const inputRef   = useRef(null)
@@ -1336,6 +1372,7 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
       if (res.status === 429) {
         const info = await res.json().catch(() => ({}))
         setMessages((prev) => [...prev, { role: 'coach', content: info.message || "You've reached today's free practice limit. Upgrade for unlimited practice, or come back tomorrow." }])
+        setCapHit(true)
         return
       }
       const data = await res.json()
@@ -1442,6 +1479,12 @@ function CoachConversationScreen({ coachSession, setScreen, onWrapUp }) {
 
       {/* Input */}
       <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, background: C.surface }}>
+        {capHit && (
+          <button
+            onClick={() => setScreen('upgrade')}
+            style={{ width: '100%', border: 'none', borderRadius: 10, padding: '12px', marginBottom: 10, background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 14, fontWeight: 700, boxShadow: SHADOW.coral }}
+          >Upgrade for unlimited practice →</button>
+        )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1 }}>
             <input
@@ -1684,9 +1727,13 @@ function PracticeScreen({ session, setScreen, onFeedback, user }) {
       )}
       {limitMsg && (
         <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
-          <p style={{ fontFamily: SANS, fontSize: 13, color: C.coral, lineHeight: 1.5 }}>
+          <p style={{ fontFamily: SANS, fontSize: 13, color: C.coral, lineHeight: 1.5, marginBottom: 10 }}>
             {limitMsg}
           </p>
+          <button
+            onClick={() => setScreen('upgrade')}
+            style={{ width: '100%', border: 'none', borderRadius: 10, padding: '11px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, boxShadow: SHADOW.coral }}
+          >Upgrade for unlimited practice →</button>
         </div>
       )}
       {loading ? (
@@ -1888,6 +1935,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
   )
   const [listening, setListening] = useState(false)
   const [sendError, setSendError] = useState(false)  // true = last API call failed, show retry
+  const [capHit, setCapHit] = useState(false)  // true = free-tier daily limit reached → offer upgrade
   const [confirmExit, setConfirmExit] = useState(false)  // guard against losing an in-progress session
   // ── Voice mode ──────────────────────────────────────────────────────────────
   const [voiceEnabled, setVoiceEnabled] = useState(() => session?.voiceEnabled !== false)
@@ -2250,6 +2298,7 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           role: 'coach',
           content: info.message || "You've reached today's free practice limit. Upgrade for unlimited practice, or come back tomorrow.",
         }])
+        setCapHit(true)
         setDone(true)
         return
       }
@@ -2537,7 +2586,15 @@ function SimulationScreen({ session, setScreen, setSessions, sessions, onSaveMes
           </div>
         )}
         <div style={{ padding: '8px 16px 12px' }}>
-        {done ? (
+        {capHit ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              onClick={() => setScreen('upgrade')}
+              style={{ width: '100%', border: 'none', borderRadius: 12, padding: '14px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 15, fontWeight: 700, boxShadow: SHADOW.coral }}
+            >Upgrade for unlimited practice →</button>
+            <Btn variant="secondary" onClick={() => handleEnd()}>Get this session's feedback ✓</Btn>
+          </div>
+        ) : done ? (
           <Btn onClick={() => handleEnd()}>Complete session ✓</Btn>
         ) : voiceEnabled ? (
 
@@ -5394,6 +5451,8 @@ export default function App() {
   const [briefingBackTarget, setBriefingBackTarget] = useState('track-scenarios')
   const [debriefBackTarget,  setDebriefBackTarget]  = useState('track-scenarios')
   const [pendingTier, setPendingTier] = useState(null)
+  // Post-Stripe-checkout banner: null | 'pending' (waiting for webhook) | 'done'
+  const [checkoutStatus, setCheckoutStatus] = useState(null)
 
   const refreshRehearsals = () => setRehearsals(getRehearsals())
 
@@ -5402,7 +5461,7 @@ export default function App() {
   const refreshTier = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!session) return null
       const { data: profile } = await supabase
         .from('profiles').select('tier').eq('id', session.user.id).maybeSingle()
       if (profile && profile.tier) {
@@ -5413,8 +5472,10 @@ export default function App() {
           lsSet(LS.user, next)
           return next
         })
+        return profile.tier
       }
     } catch {}
+    return null
   }, [])
 
   // Redirect the signed-in user to Stripe Checkout for the chosen plan.
@@ -5480,11 +5541,26 @@ export default function App() {
     }
 
     // Sync the real subscription tier from the profile. If the user is just
-    // back from Stripe Checkout or the billing portal, poll to catch the webhook.
-    refreshTier()
-    if (params && (params.get('checkout') === 'success' || backToProgress)) {
-      setTimeout(refreshTier, 1500)
-      setTimeout(refreshTier, 4000)
+    // back from Stripe Checkout, the webhook that flips their tier may lag a few
+    // seconds — poll until it lands so they never sit looking "free" after paying.
+    const justCheckedOut = params?.get('checkout') === 'success'
+    if (justCheckedOut) {
+      setCheckoutStatus('pending')
+      ;(async () => {
+        for (let i = 0; i < 15; i++) {
+          const tier = await refreshTier()
+          if (tier && tier !== 'free') { setCheckoutStatus('done'); return }
+          await new Promise((r) => setTimeout(r, 2000))
+        }
+        // Webhook still hasn't landed after ~30s — dismiss the banner quietly;
+        // the tier will sync on the next load. (Stripe retries failed webhooks.)
+        setCheckoutStatus(null)
+      })()
+    } else {
+      refreshTier()
+      if (backToProgress) { setTimeout(refreshTier, 1500); setTimeout(refreshTier, 4000) }
+    }
+    if (params && (justCheckedOut || backToProgress || params.get('checkout'))) {
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [refreshTier])
@@ -6107,6 +6183,7 @@ export default function App() {
         maxWidth: 420, margin: '0 auto', minHeight: '100dvh',
         background: C.bg, position: 'relative',
       }}>
+        {checkoutStatus && <CheckoutBanner status={checkoutStatus} onDismiss={() => setCheckoutStatus(null)} />}
         <div style={{ minHeight: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {renderScreen()}
         </div>
