@@ -5453,6 +5453,9 @@ export default function App() {
   const [pendingTier, setPendingTier] = useState(null)
   // Post-Stripe-checkout banner: null | 'pending' (waiting for webhook) | 'done'
   const [checkoutStatus, setCheckoutStatus] = useState(null)
+  // Plan the user arrived intending to buy (from landing ?plan=monthly|annual).
+  // Routes them to the upgrade screen after onboarding — never grants a tier.
+  const intendedPlanRef = useRef(null)
 
   const refreshRehearsals = () => setRehearsals(getRehearsals())
 
@@ -5531,10 +5534,16 @@ export default function App() {
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
     const backToProgress = params?.get('tab') === 'progress'
+    // Paid intent from the landing page (?plan=monthly|annual). Remembered across
+    // onboarding so we can drop the user on checkout once they have an account.
+    const plan = params?.get('plan')
+    const paidIntent = plan === 'monthly' || plan === 'annual'
+    if (paidIntent) intendedPlanRef.current = plan
 
     if (savedUser?.onboarded) {
       setUser(savedUser)
-      if (backToProgress) { setScreen('progress'); setActiveTab('progress') }
+      if (paidIntent) { setScreen('upgrade') }
+      else if (backToProgress) { setScreen('progress'); setActiveTab('progress') }
       else setScreen('home')
     } else {
       setScreen('onboard1')
@@ -5560,7 +5569,7 @@ export default function App() {
       refreshTier()
       if (backToProgress) { setTimeout(refreshTier, 1500); setTimeout(refreshTier, 4000) }
     }
-    if (params && (justCheckedOut || backToProgress || params.get('checkout'))) {
+    if (params && (justCheckedOut || backToProgress || params.get('checkout') || plan)) {
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [refreshTier])
@@ -5577,6 +5586,13 @@ export default function App() {
     lsSet(LS.user, u)
     setUser(u)
     refreshTier()  // adopt the real tier from the profile (Stripe-driven)
+    // Arrived from a paid CTA on the landing page → take them straight to checkout.
+    if (intendedPlanRef.current && (!TIER_GATING_ENABLED || u.tier === 'free')) {
+      intendedPlanRef.current = null
+      setActiveTab('home')
+      setScreen('upgrade')
+      return
+    }
     // If they named a conversation to prepare for, take them straight into the
     // Rehearse build with it pre-filled — don't make them re-type it.
     // (Rehearse is a paid feature, so free-tier users go home instead.)
