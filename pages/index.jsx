@@ -899,6 +899,26 @@ function CheckoutBanner({ status, onDismiss }) {
 }
 
 // ═══════════════════════════════════════════════
+// CHECKOUT REDIRECT SCREEN
+// Brief interstitial while we create the Stripe Checkout session and redirect.
+// Shown when a user arrives from a paid landing-page CTA (?plan=monthly|annual).
+// ═══════════════════════════════════════════════
+function CheckoutRedirectScreen() {
+  return (
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, padding: 28, textAlign: 'center' }}>
+      <div style={{ width: 56, height: 56, borderRadius: 16, background: C.coral, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: SHADOW.coral }}>
+        <svg width="30" height="27" viewBox="0 0 24 22"><rect x="2" y="2" width="20" height="14" rx="5" fill="#fff" /><polygon points="5,15 4,21 11,15" fill="#fff" /></svg>
+      </div>
+      <Dots />
+      <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.5, maxWidth: 280 }}>
+        Taking you to secure checkout…
+      </p>
+      <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkFaint }}>Payments handled by Stripe</p>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════
 const TRACK_BG = { audit: C.surface, consulting: C.surface, leadership: C.surface, career: C.surface }
@@ -5482,20 +5502,25 @@ export default function App() {
   }, [])
 
   // Redirect the signed-in user to Stripe Checkout for the chosen plan.
-  const startCheckout = useCallback(async (plan) => {
+  // Returns true when navigating to Stripe, false on failure (so auto-redirect
+  // callers can fall back instead of stranding the user). `silent` suppresses
+  // the alert for the auto-redirect path, which shows its own retry UI.
+  const startCheckout = useCallback(async (plan, { silent = false } = {}) => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      if (!session) return false
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ plan }),
       })
       const data = await res.json()
-      if (data.url) window.location.href = data.url
-      else alert(data.error || 'Could not start checkout — please try again.')
+      if (data.url) { window.location.href = data.url; return true }
+      if (!silent) alert(data.error || 'Could not start checkout — please try again.')
+      return false
     } catch {
-      alert('Could not start checkout — please try again.')
+      if (!silent) alert('Could not start checkout — please try again.')
+      return false
     }
   }, [])
 
@@ -5540,10 +5565,22 @@ export default function App() {
     const paidIntent = plan === 'monthly' || plan === 'annual'
     if (paidIntent) intendedPlanRef.current = plan
 
-    if (savedUser?.onboarded) {
+    if (paidIntent) {
+      // Came from a paid CTA on the landing page. They've already decided to buy,
+      // so send them straight to Stripe Checkout — no onboarding gate in the way.
+      // New users onboard after returning from payment. If checkout can't start,
+      // fall back so they're never stranded.
+      if (savedUser?.onboarded) setUser(savedUser)
+      setScreen('checkout-redirect')
+      startCheckout(plan, { silent: true }).then((ok) => {
+        if (ok) return  // navigating to Stripe
+        intendedPlanRef.current = null
+        if (savedUser?.onboarded) setScreen('upgrade')
+        else setScreen('onboard1')
+      })
+    } else if (savedUser?.onboarded) {
       setUser(savedUser)
-      if (paidIntent) { setScreen('upgrade') }
-      else if (backToProgress) { setScreen('progress'); setActiveTab('progress') }
+      if (backToProgress) { setScreen('progress'); setActiveTab('progress') }
       else setScreen('home')
     } else {
       setScreen('onboard1')
@@ -5572,7 +5609,7 @@ export default function App() {
     if (params && (justCheckedOut || backToProgress || params.get('checkout') || plan)) {
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, [refreshTier])
+  }, [refreshTier, startCheckout])
 
   // Navigation
   const goTab = (tab) => {
@@ -5586,13 +5623,8 @@ export default function App() {
     lsSet(LS.user, u)
     setUser(u)
     refreshTier()  // adopt the real tier from the profile (Stripe-driven)
-    // Arrived from a paid CTA on the landing page → take them straight to checkout.
-    if (intendedPlanRef.current && (!TIER_GATING_ENABLED || u.tier === 'free')) {
-      intendedPlanRef.current = null
-      setActiveTab('home')
-      setScreen('upgrade')
-      return
-    }
+    // (Paid-CTA users never reach onboarding before paying — they're sent straight
+    // to checkout on mount and onboard after returning from payment.)
     // If they named a conversation to prepare for, take them straight into the
     // Rehearse build with it pre-filled — don't make them re-type it.
     // (Rehearse is a paid feature, so free-tier users go home instead.)
@@ -5843,7 +5875,7 @@ export default function App() {
   }
 
   const SUB_SCREENS = ['practice', 'feedback', 'simulation', 'share', 'track-scenarios', 'storylab', 'daily-rep', 'daily-rep-briefing', 'daily-rep-debrief', 'scenario-briefing', 'scenario-debrief']
-  const showNav = !['loading', 'onboard1', 'onboard2', 'onboard3', 'onboard-install', 'simulation', 'coach-conversation', 'daily-rep-insight', 'rehearse-build', 'rehearse-note', 'rehearse-reflect'].includes(screen)
+  const showNav = !['loading', 'checkout-redirect', 'onboard1', 'onboard2', 'onboard3', 'onboard-install', 'simulation', 'coach-conversation', 'daily-rep-insight', 'rehearse-build', 'rehearse-note', 'rehearse-reflect'].includes(screen)
 
   const renderScreen = () => {
     switch (screen) {
@@ -6052,6 +6084,9 @@ export default function App() {
             onBack={() => { setScreen('home'); setActiveTab('home') }}
           />
         )
+
+      case 'checkout-redirect':
+        return <CheckoutRedirectScreen />
 
       case 'rehearse-build':
         return (
