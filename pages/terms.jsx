@@ -42,13 +42,18 @@ export default function TermsPage() {
         <div style={s.inner}>
           <Link href="/" style={s.back}>← Back to Fable</Link>
 
-          <div style={s.logo}>
-            <span style={s.logoF}>F</span>.able
+          <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: 4 }}>
+            <span style={{ fontFamily: SANS, fontSize: 28, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: C.coral }}>F</span>
+            <svg width="13" height="12" viewBox="0 0 24 22" style={{ display: 'block', margin: '0 0 2.5px -0.8px' }}>
+              <rect x="2" y="2" width="20" height="14" rx="5" fill={C.coral} />
+              <polygon points="5,15 4,21 11,15" fill={C.coral} />
+            </svg>
+            <span style={{ fontFamily: SANS, fontSize: 28, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: C.navy, marginLeft: -0.6 }}>able</span>
           </div>
           <p style={s.label}>Terms of Service</p>
 
           <h1 style={s.h1}>Terms of Service</h1>
-          <p style={s.updated}>Last updated: June 23, 2026</p>
+          <p style={s.updated}>Last updated: July 1, 2026</p>
 
           <p style={s.p}>
             By using Fable ("the Service"), you agree to these terms. Please read them — they're short and written in plain English.
@@ -71,7 +76,7 @@ export default function TermsPage() {
 
           <h2 style={s.h2}>Subscriptions and billing</h2>
           <ul style={s.ul}>
-            <li style={s.li}><strong>Free tier</strong> — access to 4 scenarios (one per track), no credit card required, no time limit.</li>
+            <li style={s.li}><strong>Free tier</strong> — access to 4 scenarios (one per track), no credit card required, up to 5 practice sessions a day.</li>
             <li style={s.li}><strong>Monthly ($19/mo)</strong> — billed monthly, cancel anytime. Access ends at the end of the billing period.</li>
             <li style={s.li}><strong>Annual founding ($99/yr)</strong> — available to the first 50 members only. Rate is locked for life as long as the subscription stays active. After 50 founding members, annual pricing moves to $199/yr.</li>
             <li style={s.li}>All payments are processed by Stripe. We do not store your card details.</li>

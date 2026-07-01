@@ -42,13 +42,18 @@ export default function PrivacyPage() {
         <div style={s.inner}>
           <Link href="/" style={s.back}>← Back to Fable</Link>
 
-          <div style={s.logo}>
-            <span style={s.logoF}>F</span>.able
+          <div style={{ display: 'flex', alignItems: 'flex-end', marginBottom: 4 }}>
+            <span style={{ fontFamily: SANS, fontSize: 28, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: C.coral }}>F</span>
+            <svg width="13" height="12" viewBox="0 0 24 22" style={{ display: 'block', margin: '0 0 2.5px -0.8px' }}>
+              <rect x="2" y="2" width="20" height="14" rx="5" fill={C.coral} />
+              <polygon points="5,15 4,21 11,15" fill={C.coral} />
+            </svg>
+            <span style={{ fontFamily: SANS, fontSize: 28, fontWeight: 700, lineHeight: 1, letterSpacing: '-0.03em', color: C.navy, marginLeft: -0.6 }}>able</span>
           </div>
           <p style={s.label}>Privacy Policy</p>
 
           <h1 style={s.h1}>Your data, handled with care.</h1>
-          <p style={s.updated}>Last updated: June 23, 2026</p>
+          <p style={s.updated}>Last updated: July 1, 2026</p>
 
           <p style={s.p}>
             Fable is built for professionals who practice sensitive conversations — performance reviews, audit findings, difficult client moments. We take data seriously. This policy explains exactly what we collect, how we use it, and what we never do with it.
@@ -58,7 +63,7 @@ export default function PrivacyPage() {
 
           <h2 style={s.h2}>What we collect</h2>
           <ul style={s.ul}>
-            <li style={s.li}><strong>Email address</strong> — when you sign up or join the waitlist.</li>
+            <li style={s.li}><strong>Email address</strong> — when you create an account.</li>
             <li style={s.li}><strong>Conversation transcripts</strong> — the text of your practice sessions, used to generate AI coaching feedback.</li>
             <li style={s.li}><strong>Session metadata</strong> — timestamps, scenario type, difficulty level, and session ratings.</li>
             <li style={s.li}><strong>Usage data</strong> — pages visited, features used, session duration. Standard analytics to understand how the product is working.</li>
@@ -74,10 +79,10 @@ export default function PrivacyPage() {
           <h2 style={s.h2}>Third-party processors</h2>
           <ul style={s.ul}>
             <li style={s.li}><strong>Anthropic</strong> — processes your conversation transcripts to generate AI coaching feedback. Data is transmitted securely and not retained beyond the session.</li>
+            <li style={s.li}><strong>OpenAI</strong> — processes your voice audio when you use voice mode, to transcribe what you say and generate the counterpart's spoken replies. Audio is not retained beyond generating the response.</li>
             <li style={s.li}><strong>Vercel</strong> — hosts the Fable web application.</li>
-            <li style={s.li}><strong>Supabase</strong> — stores your account data and session history.</li>
+            <li style={s.li}><strong>Supabase</strong> — stores your account data and session history, and sends account emails (like password resets).</li>
             <li style={s.li}><strong>Stripe</strong> — processes subscription payments. We never see or store your full card details.</li>
-            <li style={s.li}><strong>Brevo</strong> — sends transactional and streak emails.</li>
           </ul>
 
           <h2 style={s.h2}>Data retention</h2>
@@ -87,7 +92,7 @@ export default function PrivacyPage() {
 
           <h2 style={s.h2}>Security</h2>
           <p style={s.p}>
-            All data is transmitted over HTTPS. Your API key is never exposed to the browser — all AI calls route through our server-side API. We follow industry-standard security practices and update dependencies regularly.
+            All data is transmitted over HTTPS. Our AI API keys are never exposed to the browser — all AI calls route through our server-side API. We follow industry-standard security practices and update dependencies regularly.
           </p>
 
           <h2 style={s.h2}>Cookies</h2>
