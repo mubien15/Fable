@@ -4250,9 +4250,9 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                   {/* Resume or Briefing — depends on whether there's a saved conversation */}
                   {isLocked ? (
                     <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
-                      <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 6 }}>Founding Members only</p>
+                      <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 6 }}>Members only</p>
                       <p style={{ fontFamily: SERIF, fontSize: 13, color: C.inkMid, lineHeight: 1.5, marginBottom: 12 }}>
-                        This scenario is part of the full Fable library. Founding members get all 30+ scenarios at a rate locked for life.
+                        This scenario is part of the full Fable library. Any Fable membership — monthly or founding annual — unlocks all 30+ scenarios.
                       </p>
                       <button onClick={onUpgrade} style={{ display: 'block', width: '100%', border: 'none', padding: '12px', borderRadius: 12, background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, boxShadow: SHADOW.coral }}>
                         Unlock all scenarios →
@@ -4936,7 +4936,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDele
   const upcoming = rehearsals.filter((r) => r.status !== 'done')
   const past     = rehearsals.filter((r) => r.status === 'done')
 
-  // ── Free tier: Rehearse is a Founding Members feature ──
+  // ── Free tier: Rehearse is a paid-membership feature (any plan, not just founding) ──
   if (TIER_GATING_ENABLED && user?.tier === 'free') {
     return (
       <div className="fade-up" style={{ padding: '36px 24px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
@@ -4947,7 +4947,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDele
 
         <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 18, padding: '28px 22px', marginBottom: 24, textAlign: 'center' }}>
           <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><LineIcon id="lock" color={C.coral} size={30} /></p>
-          <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 10 }}>Founding Members only</p>
+          <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 10 }}>Members only</p>
           <p style={{ fontFamily: SERIF, fontSize: 16, color: C.inkMid, lineHeight: 1.6, marginBottom: 18 }}>
             Rehearse builds a simulation <strong style={{ color: C.coral }}>personalized to you</strong> — your exact situation, the real person you're facing, and what you're worried about. It's part of the full Fable membership.
           </p>
