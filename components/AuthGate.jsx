@@ -157,7 +157,19 @@ export default function AuthGate({ children }) {
     }
   }
 
-  if (!checked) return <div style={{ minHeight: '100dvh', background: C.bg }} />
+  // Pre-JS / pre-session state. This is what Next prerenders into the static
+  // HTML, so it paints from the CDN in ~100ms — a branded splash instead of a
+  // blank page while the bundle downloads and the session check runs.
+  if (!checked) {
+    return (
+      <div style={{ minHeight: '100dvh', background: PAGE_BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
+        <h1 style={{ margin: 0, lineHeight: 1 }}>
+          <Wordmark size={34} />
+        </h1>
+        <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${C.border}`, borderTopColor: C.coral, animation: 'spin 0.7s linear infinite' }} />
+      </div>
+    )
+  }
   if (session && mode !== 'recovery') {
     if (!hydrated) {
       return (
