@@ -53,7 +53,7 @@ export default function TermsPage() {
           <p style={s.label}>Terms of Service</p>
 
           <h1 style={s.h1}>Terms of Service</h1>
-          <p style={s.updated}>Last updated: July 1, 2026</p>
+          <p style={s.updated}>Last updated: August 18, 2026</p>
 
           <p style={s.p}>
             By using Fable ("the Service"), you agree to these terms. Please read them — they're short and written in plain English.
@@ -77,8 +77,8 @@ export default function TermsPage() {
           <h2 style={s.h2}>Subscriptions and billing</h2>
           <ul style={s.ul}>
             <li style={s.li}><strong>Free tier</strong> — access to 4 scenarios (one per track), no credit card required, up to 5 practice sessions a day.</li>
-            <li style={s.li}><strong>Monthly ($19/mo)</strong> — billed monthly, cancel anytime. Access ends at the end of the billing period.</li>
-            <li style={s.li}><strong>Annual founding ($99/yr)</strong> — available to the first 50 members only. Rate is locked for life as long as the subscription stays active. After 50 founding members, annual pricing moves to $199/yr.</li>
+            <li style={s.li}><strong>Monthly ($5/mo)</strong> — billed monthly, cancel anytime. Access ends at the end of the billing period.</li>
+            <li style={s.li}><strong>Annual ($50/yr)</strong> — billed yearly, two months free compared to monthly. Cancel anytime; access continues until the end of the billing period.</li>
             <li style={s.li}>All payments are processed by Stripe. We do not store your card details.</li>
             <li style={s.li}>No refunds for partial billing periods, but you can cancel before your next renewal at any time.</li>
           </ul>

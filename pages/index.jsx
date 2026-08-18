@@ -15,7 +15,7 @@ import { apiFetch } from '../lib/apiClient'
 // ═══════════════════════════════════════════════
 // Master switch for free/paid tier gating (locked scenarios + Rehearse).
 // Set to false for a completely open app (no friction). Flip to true to
-// re-enable the founding-members paywall.
+// re-enable the paid-membership paywall.
 const TIER_GATING_ENABLED = true
 
 // ═══════════════════════════════════════════════
@@ -887,7 +887,7 @@ function CheckoutBanner({ status, onDismiss }) {
       boxShadow: '0 4px 14px rgba(28,43,74,0.18)',
     }}>
       {done ? (
-        <span>🎉 You’re in — founding access unlocked.</span>
+        <span>🎉 You’re in — full access unlocked.</span>
       ) : (
         <>
           <Dots />
@@ -3328,7 +3328,7 @@ function ProgressScreen({ sessions, setScreen, dailyRep, completedData, openBrie
             onClick={() => setScreen('upgrade')}
             style={{ border: 'none', borderRadius: 24, padding: '11px 22px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, boxShadow: SHADOW.coral }}
           >
-            Unlock founding access →
+            Unlock full access →
           </button>
         </div>
       ) : null}
@@ -4252,7 +4252,7 @@ function TrackScenariosScreen({ track, setScreen, onStartScenario, onViewBriefin
                     <div style={{ background: C.coralBg, border: `1px solid ${C.coralDim}`, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
                       <p style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: C.coral, marginBottom: 6 }}>Members only</p>
                       <p style={{ fontFamily: SERIF, fontSize: 13, color: C.inkMid, lineHeight: 1.5, marginBottom: 12 }}>
-                        This scenario is part of the full Fable library. Any Fable membership — monthly or founding annual — unlocks all 30+ scenarios.
+                        This scenario is part of the full Fable library. Any Fable membership — monthly or annual — unlocks all 30+ scenarios.
                       </p>
                       <button onClick={onUpgrade} style={{ display: 'block', width: '100%', border: 'none', padding: '12px', borderRadius: 12, background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 13, fontWeight: 700, boxShadow: SHADOW.coral }}>
                         Unlock all scenarios →
@@ -4303,28 +4303,28 @@ function UpgradeScreen({ onCheckout, onBack }) {
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: C.inkSoft, fontSize: 20, marginBottom: 18, padding: 0 }}>←</button>
 
       <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>
-        Founding access
+        Fable membership
       </p>
       <h1 style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: C.ink, lineHeight: 1.2, marginBottom: 8 }}>
         Unlock the full Fable
       </h1>
       <p style={{ fontFamily: SANS, fontSize: 15, color: C.inkMid, lineHeight: 1.55, marginBottom: 24 }}>
-        Everything Fable is and becomes — at a founding rate locked for life.
+        Everything Fable is and becomes — one simple price.
       </p>
 
       {/* Annual — featured */}
       <div style={{ background: C.ink, borderRadius: 20, padding: '22px', marginBottom: 14, position: 'relative', boxShadow: SHADOW.lift }}>
         <span style={{ position: 'absolute', top: 18, right: 18, background: C.coral, color: '#fff', fontFamily: SANS, fontSize: 9, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', padding: '4px 9px', borderRadius: 20 }}>
-          First 50 only
+          Best value
         </span>
-        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: '#FFB4A3', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Annual · Founding</p>
+        <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: '#FFB4A3', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Annual</p>
         <p style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 700, color: '#fff', lineHeight: 1, marginBottom: 2, ...STAT_NUM }}>
-          $99<span style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}> /year</span>
+          $50<span style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.5)' }}> /year</span>
         </p>
-        <p style={{ fontFamily: SANS, fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 18 }}>That’s under $8.25/month · save 57% vs monthly</p>
+        <p style={{ fontFamily: SANS, fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 18 }}>Two months free vs monthly</p>
         <button onClick={() => go('annual')} disabled={!!busy}
           style={{ width: '100%', border: 'none', borderRadius: 12, padding: '14px', background: 'linear-gradient(180deg, #ED7359 0%, #E8644A 100%)', color: '#fff', fontFamily: SANS, fontSize: 15, fontWeight: 700, boxShadow: SHADOW.coral, opacity: busy && busy !== 'annual' ? 0.5 : 1 }}>
-          {busy === 'annual' ? 'Opening checkout…' : 'Get founding access →'}
+          {busy === 'annual' ? 'Opening checkout…' : 'Go annual →'}
         </button>
       </div>
 
@@ -4332,7 +4332,7 @@ function UpgradeScreen({ onCheckout, onBack }) {
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: '22px', marginBottom: 22, boxShadow: SHADOW.card }}>
         <p style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: C.coral, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Monthly</p>
         <p style={{ fontFamily: SERIF, fontSize: 40, fontWeight: 700, color: C.ink, lineHeight: 1, marginBottom: 2, ...STAT_NUM }}>
-          $19<span style={{ fontSize: 15, fontWeight: 600, color: C.inkFaint }}> /month</span>
+          $5<span style={{ fontSize: 15, fontWeight: 600, color: C.inkFaint }}> /month</span>
         </p>
         <p style={{ fontFamily: SANS, fontSize: 12, color: C.inkSoft, marginBottom: 18 }}>Cancel anytime</p>
         <button onClick={() => go('monthly')} disabled={!!busy}
@@ -4936,7 +4936,7 @@ function RehearseScreen({ user, rehearsals, onNew, onRehearse, onReflect, onDele
   const upcoming = rehearsals.filter((r) => r.status !== 'done')
   const past     = rehearsals.filter((r) => r.status === 'done')
 
-  // ── Free tier: Rehearse is a paid-membership feature (any plan, not just founding) ──
+  // ── Free tier: Rehearse is a paid-membership feature (any paid plan) ──
   if (TIER_GATING_ENABLED && user?.tier === 'free') {
     return (
       <div className="fade-up" style={{ padding: '36px 24px calc(120px + env(safe-area-inset-bottom, 0px))' }}>
