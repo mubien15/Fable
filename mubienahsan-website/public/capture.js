@@ -34,12 +34,12 @@
     exitIntent:  attr('exit-intent', 'true') !== 'false',
     popup:       attr('popup', 'true') !== 'false',
     accent:      attr('accent', '#1C2B4A'),
-    heading:     attr('heading', 'Get the first issue free'),
-    subheading:  attr('subheading', 'Practical notes on communication and judgement. One email, no noise, unsubscribe anytime.'),
-    button:      attr('button', 'Send it to me'),
-    success:     attr('success', 'Check your inbox — click the confirmation link and your copy is on its way.'),
+    heading:     attr('heading', 'The First Build — free'),
+    subheading:  attr('subheading', 'Build an AI morning brief that writes itself. The real instructions, every decision behind them, and the parts I got wrong. No code required.'),
+    button:      attr('button', 'Send me the guide'),
+    success:     attr('success', 'Check your inbox — click the confirmation link and The First Build is on its way.'),
     placeholder: attr('placeholder', 'you@example.com'),
-    consent:     attr('consent', 'By subscribing you agree to receive occasional emails. Unsubscribe anytime.')
+    consent:     attr('consent', "You'll also get new builds as I publish them. Free, always. Unsubscribe anytime.")
   }
 
   // ── suppression ───────────────────────────────────────────────────────────

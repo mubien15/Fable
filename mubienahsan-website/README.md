@@ -96,8 +96,9 @@ them.
 
 ### 6. The PDF
 
-Put it at `public/lead-magnet.pdf` (or update the `href` in
-`thank-you.html` and in the welcome automation to wherever it lives).
+Already in place at `public/the-first-build.pdf` (409 KB, 8 pages). The
+thank-you page links to it. Point the welcome automation at
+`https://mubienahsan.com/the-first-build.pdf` too.
 
 ### 7. Install on the site
 
@@ -108,8 +109,8 @@ One tag, before `</body>`:
         data-endpoint="/api/subscribe"
         data-delay="20"
         data-accent="#1C2B4A"
-        data-heading="Get the first issue free"
-        data-button="Send it to me"></script>
+        data-heading="The First Build — free"
+        data-button="Send me the guide"></script>
 ```
 
 And the inline form — put this high on the page, in the hero:
@@ -134,7 +135,7 @@ require editing JavaScript.
 | `data-exit-intent` | `true` | Also open when the pointer leaves the top of the window |
 | `data-popup` | `true` | `false` gives you the inline form only |
 | `data-accent` | `#1C2B4A` | Button and focus-ring colour |
-| `data-heading` / `data-subheading` | — | Popup copy |
+| `data-heading` / `data-subheading` | — | Popup copy (defaults pitch *The First Build*) |
 | `data-button` / `data-placeholder` | — | Form copy |
 | `data-success` | — | Shown after a successful submit |
 | `data-consent` | — | The fine print under the button |
