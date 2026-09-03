@@ -10,14 +10,46 @@ it works on a static site or inside Next.js without changes.
 
 ## Files
 
-| File | What it is | Where it goes |
-|---|---|---|
-| `api/subscribe.js` | Serverless function. Takes an email, asks Brevo to send the confirmation email. | `/api/subscribe` on your site |
-| `public/capture.js` | The widget. Renders the popup **and** the inline form. No dependencies. | Served at `/capture.js` |
-| `public/thank-you.html` | Post-confirmation landing page with the download button. | Served at `/thank-you.html` |
+| File | What it is |
+|---|---|
+| `api/subscribe.js` | Serverless function. Takes an email, asks Brevo to send the confirmation email. |
+| `static/capture.js` | The widget. Renders the popup **and** the inline form. No dependencies. |
+| `static/thank-you.html` | Post-confirmation landing page with the download button. |
+| `static/the-first-build.pdf` | The lead magnet itself. |
 
-Copy all three into your site, keeping the `api/` and `public/` split that your
-host expects (on Vercel this layout works as-is).
+### Where the files go
+
+This matters and it is easy to get wrong. The `static/` folder here is a
+container, **not** the destination folder name — put its contents where your
+project actually serves files from.
+
+**If your site is a flat static project** (the layout `fable-landingpage`
+uses — `index.html` at the root, no framework):
+
+```
+your-project/
+  index.html
+  api/subscribe.js          <- from api/
+  capture.js                <- from static/
+  thank-you.html            <- from static/
+  the-first-build.pdf       <- from static/
+  vercel.json
+```
+
+**If your site is Next.js:**
+
+```
+your-project/
+  pages/api/subscribe.js    <- from api/  (or app/api/subscribe/route.js)
+  public/capture.js         <- from static/
+  public/thank-you.html     <- from static/
+  public/the-first-build.pdf
+```
+
+Either way the files must end up served at `/capture.js`,
+`/thank-you.html` and `/the-first-build.pdf`. **Load the site and open
+`/capture.js` in the browser before wiring anything else up** — if that
+404s, the script tag will fail silently and no form will ever appear.
 
 ---
 
@@ -96,7 +128,7 @@ them.
 
 ### 6. The PDF
 
-Already in place at `public/the-first-build.pdf` (409 KB, 8 pages). The
+Already in place at `static/the-first-build.pdf` (409 KB, 8 pages). The
 thank-you page links to it. Point the welcome automation at
 `https://mubienahsan.com/the-first-build.pdf` too.
 
